@@ -16,7 +16,6 @@ import {
   Sparkles,
   Info,
   MapPin,
-  Trash2,
   Pencil,
   Loader2
 } from 'lucide-react';
@@ -47,7 +46,6 @@ export default function LabDashboard() {
   const [labNotes, setLabNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successToast, setSuccessToast] = useState('');
-  const [cancellingId, setCancellingId] = useState(null);
 
   const fetchLabRequests = async () => {
     setLoading(true);
@@ -85,22 +83,6 @@ export default function LabDashboard() {
       fetchLabRequests();
     } catch (err) {
       console.error('Failed to update status:', err);
-    }
-  };
-
-  const handleCancelReferral = async (reqId) => {
-    if (!window.confirm('Cancel this lab referral? This cannot be undone.')) return;
-    setCancellingId(reqId);
-    try {
-      await fetch(`${API_BASE}/api/officer/lab-requests/${reqId}`, { method: 'DELETE' });
-      setSuccessToast('Lab referral cancelled.');
-      setTimeout(() => setSuccessToast(''), 4000);
-      fetchLabRequests();
-    } catch (err) {
-      console.error('Cancel referral error:', err);
-      alert('Failed to cancel referral.');
-    } finally {
-      setCancellingId(null);
     }
   };
 
@@ -499,20 +481,6 @@ export default function LabDashboard() {
                       >
                         <Pencil className="w-3.5 h-3.5" />
                         Edit Result
-                      </button>
-                    )}
-
-                    {/* Cancel Referral — only for pending/non-completed */}
-                    {!isCompleted && (
-                      <button
-                        onClick={() => handleCancelReferral(req.id)}
-                        disabled={cancellingId === req.id}
-                        title="Cancel referral"
-                        className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-red-400 hover:text-red-300 transition-colors"
-                      >
-                        {cancellingId === req.id
-                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          : <Trash2 className="w-3.5 h-3.5" />}
                       </button>
                     )}
                   </div>
