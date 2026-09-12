@@ -20,7 +20,6 @@ import AdditionalInfo from './pages/AdditionalInfo';
 import FarmerAlerts from './pages/FarmerAlerts';
 
 // Member 3 Pages (Slice 3: Agriculture Officer Dashboard & Outbreak Management)
-import OfficerSidebar from './components/OfficerSidebar';
 import OfficerDashboard from './pages/OfficerDashboard';
 import OfficerTicket from './pages/OfficerTicket';
 import RegionalMap from './pages/RegionalMap';
@@ -32,12 +31,11 @@ import AIFeedbackPage from './pages/AIFeedbackPage';
 import LabDashboard from './pages/LabDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 
-/** Officer layout – sidebar + main content area with seamless header integration */
+/** Officer layout – full web page container seamlessly integrated with global Navbar */
 function OfficerLayout() {
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] bg-[#05130b]">
-      <OfficerSidebar />
-      <main className="ml-60 flex-1 p-6 md:p-8 overflow-y-auto min-h-[calc(100vh-4rem)]">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#05130b] w-full">
+      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 w-full">
         <Outlet />
       </main>
     </div>
