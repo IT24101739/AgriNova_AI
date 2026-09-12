@@ -1,0 +1,127 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import PriorityBadge from './PriorityBadge';
+import { ArrowUpDown, ChevronRight } from 'lucide-react';
+
+const STATUS_PILL = {
+  OPEN:                 'bg-slate-700/60 text-slate-300',
+  ASSIGNED:             'bg-blue-500/20 text-blue-300',
+  FIELD_VISIT_REQUIRED: 'bg-amber-500/20 text-amber-300',
+  UNDER_REVIEW:         'bg-violet-500/20 text-violet-300',
+  LAB_REVIEW:           'bg-pink-500/20 text-pink-300',
+  CONFIRMED:            'bg-green-500/20 text-green-300',
+  RESOLVED:             'bg-slate-600/40 text-slate-400',
+};
+
+export default function TicketTable({ tickets = [], loading }) {
+  const navigate = useNavigate();
+  const [sortKey, setSortKey] = useState('created_at');
+  const [sortAsc, setSortAsc] = useState(false);
+
+  const sorted = [...tickets].sort((a, b) => {
+    const va = sortKey === 'confidence'
+      ? (a.reports?.confidence || 0)
+      : (a[sortKey] || '');
+    const vb = sortKey === 'confidence'
+      ? (b.reports?.confidence || 0)
+      : (b[sortKey] || '');
+    return sortAsc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+  });
+
+  const toggleSort = (key) => {
+    if (sortKey === key) setSortAsc(a => !a);
+    else { setSortKey(key); setSortAsc(false); }
+  };
+
+  const Th = ({ col, label }) => (
+    <th
+      className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-widest
+                 text-slate-400 cursor-pointer hover:text-slate-200 select-none"
+      onClick={() => toggleSort(col)}
+    >
+      <span className="flex items-center gap-1">
+        {label}
+        <ArrowUpDown className="w-3 h-3 opacity-50" />
+      </span>
+    </th>
+  );
+
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-12 rounded-lg bg-white/5 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!sorted.length) {
+    return (
+      <div className="text-center py-16 text-slate-500">
+        <p className="text-lg font-medium mb-1">No tickets found</p>
+        <p className="text-sm">Adjust filters or check back later</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="ag-table">
+        <thead>
+          <tr>
+            <Th col="priority" label="Priority" />
+            <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-widest text-slate-400">Disease / Crop</th>
+            <Th col="reason" label="Reason" />
+            <Th col="status" label="Status" />
+            <Th col="confidence" label="AI Conf." />
+            <Th col="created_at" label="Date" />
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map(ticket => {
+            const report = ticket.reports || {};
+            const pct = report.confidence ? `${Math.round(report.confidence * 100)}%` : '—';
+            const statusCls = STATUS_PILL[ticket.status] || STATUS_PILL.OPEN;
+            return (
+              <tr
+                key={ticket.id}
+                onClick={() => navigate(`/officer/tickets/${ticket.id}`)}
+                className="cursor-pointer hover:bg-white/5 transition-colors"
+              >
+                <td><PriorityBadge priority={ticket.priority} /></td>
+                <td>
+                  <p className="font-medium text-white">{report.disease || 'Undiagnosed'}</p>
+                  <p className="text-xs text-slate-500">{report.crop || '—'}</p>
+                </td>
+                <td>
+                  <span className="text-xs text-slate-300">{ticket.reason?.replace(/_/g, ' ')}</span>
+                </td>
+                <td>
+                  <span className={`badge ${statusCls}`}>
+                    {ticket.status?.replace(/_/g, ' ')}
+                  </span>
+                </td>
+                <td>
+                  <span className={`font-mono text-sm font-semibold ${
+                    report.confidence < 0.5 ? 'text-red-400' :
+                    report.confidence < 0.75 ? 'text-amber-400' : 'text-green-400'
+                  }`}>{pct}</span>
+                </td>
+                <td className="text-xs text-slate-400">
+                  {new Date(ticket.created_at).toLocaleDateString('en-GB', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                  })}
+                </td>
+                <td>
+                  <ChevronRight className="w-4 h-4 text-slate-600" />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
