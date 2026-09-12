@@ -181,11 +181,13 @@ VALUES ('crop-images', 'crop-images', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
 -- Allow public read access to crop-images
-CREATE POLICY IF NOT EXISTS "Public Access"
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+CREATE POLICY "Public Access"
     ON storage.objects FOR SELECT
     USING (bucket_id = 'crop-images');
 
 -- Allow authenticated and anon uploads to crop-images
-CREATE POLICY IF NOT EXISTS "Allow Uploads"
+DROP POLICY IF EXISTS "Allow Uploads" ON storage.objects;
+CREATE POLICY "Allow Uploads"
     ON storage.objects FOR INSERT
     WITH CHECK (bucket_id = 'crop-images');
