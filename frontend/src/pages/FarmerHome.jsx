@@ -265,7 +265,7 @@ export default function FarmerHome() {
                 <div className="space-y-2.5 text-xs">
                   <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#081b11]/80 border border-emerald-500/15">
                     <span className="text-slate-400">Supported Crops</span>
-                    <span className="font-semibold text-white">Tomato, Potato, Pepper, Rice, Chili</span>
+                    <span className="font-semibold text-white">Tomato, Potato, Pepper, Rice, Corn, Tea, Banana, Brinjal</span>
                   </div>
 
                   <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#081b11]/80 border border-emerald-500/15">
@@ -658,7 +658,7 @@ export default function FarmerHome() {
               </div>
               <h3 className="text-base font-bold text-white mb-1">No Field Scans Yet</h3>
               <p className="text-xs text-slate-400 max-w-md mx-auto mb-5">
-                Take a photo of your Tomato, Potato, or Pepper crop leaf to get instant AI disease diagnosis and treatment steps.
+                Take a photo of your crop foliage (Tomato, Potato, Pepper, Rice, Corn, Tea, Banana, Brinjal) to get instant AI disease diagnosis and treatment steps.
               </p>
               <button
                 onClick={() => navigate('/reports/new')}
@@ -718,10 +718,10 @@ export default function FarmerHome() {
                 <h3 className="font-bold text-white text-sm">Photograph the Leaf</h3>
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Take a clear, close-up photo of any infected-looking leaf from your crop — tomato, potato, rice, chili, or pepper. Good lighting gives the best results.
+                Take a clear, close-up photo of any infected-looking leaf from your crop — tomato, potato, rice, chili, pepper, corn, tea, or brinjal. Good lighting gives the best results.
               </p>
               <div className="mt-3 flex flex-wrap gap-1">
-                {['🍅 Tomato','🥔 Potato','🌾 Rice','🌶️ Chili'].map(c => (
+                {['🍅 Tomato','🥔 Potato','🌶️ Pepper','🌾 Rice','🌽 Corn','🍃 Tea','🍌 Banana','🍆 Brinjal'].map(c => (
                   <span key={c} className="crop-badge text-[10px] py-0.5">{c}</span>
                 ))}
               </div>

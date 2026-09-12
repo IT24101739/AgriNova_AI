@@ -29,7 +29,16 @@ const SEVERITY_CONFIG = {
 const CROP_EMOJI = {
   Tomato: '🍅',
   Potato: '🥔',
-  Pepper: '🫑',
+  Pepper: '🌶️',
+  Chili: '🌶️',
+  Rice: '🌾',
+  Corn: '🌽',
+  Tea: '🍃',
+  Banana: '🍌',
+  Eggplant: '🍆',
+  Soybean: '🌱',
+  Grape: '🍇',
+  Apple: '🍎',
 };
 
 export default function ReportCard({
