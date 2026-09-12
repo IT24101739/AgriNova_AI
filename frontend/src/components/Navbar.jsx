@@ -39,9 +39,19 @@ export default function Navbar() {
 
     const checkHealth = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/health`, { timeout: 12000 });
+        let res;
+        try {
+          res = await axios.get(`${API_BASE_URL}/health`, { timeout: 12000 });
+        } catch (hErr) {
+          // If /health endpoint is not found (404), fallback to pinging the root URL /
+          if (hErr.response && hErr.response.status === 404) {
+            res = await axios.get(`${API_BASE_URL}/`, { timeout: 12000 });
+          } else {
+            throw hErr;
+          }
+        }
         if (!cancelled) {
-          if (res.status === 200) {
+          if (res && (res.status === 200 || res.status === 304)) {
             setBackendStatus('online');
             failCount = 0;
           } else {
