@@ -24,7 +24,7 @@ LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "gemini").lower()
 LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
 LLM_MODEL: str = os.getenv(
     "LLM_MODEL",
-    "gemini-1.5-flash" if LLM_PROVIDER == "gemini" else "gpt-4o-mini",
+    "gemini-2.5-flash" if LLM_PROVIDER == "gemini" else "gpt-4o-mini",
 )
 
 

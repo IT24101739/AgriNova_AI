@@ -19,10 +19,12 @@ To replace with a different architecture:
 """
 
 import io
+import json
 import logging
 import os
 from typing import Optional
 
+import cv2
 import numpy as np
 from PIL import Image
 
@@ -177,62 +179,227 @@ class DiseaseClassifier:
     # Inference
     # ------------------------------------------------------------------
 
-    def predict_disease(self, image_bytes: bytes) -> dict:
+    def predict_disease(self, image_bytes: bytes, crop: str = "Tomato") -> dict:
         """
-        Run disease classification on raw image bytes.
+        Run robust disease classification on raw image bytes.
+        Includes foliage verification (rejects non-plant images like human faces, animals, etc.)
+        and accurate health/disease detection (detects healthy leaves vs specific diseases).
 
         Args:
-            image_bytes: Raw bytes of the uploaded leaf image.
+            image_bytes: Raw bytes of the uploaded image.
+            crop: Expected crop type selected by the farmer.
 
         Returns:
             {
+                "is_plant_leaf": bool,
+                "is_healthy": bool,
                 "disease": str,
-                "confidence": float (0-1),
-                "crop": str
+                "confidence": float,
+                "crop": str,
+                "severity": str,
+                "affected_percentage": float,
+                "rejection_reason": str (if not plant leaf),
+                "notes": str
+            }
+        """
+        # 1. First priority: Use Gemini Multimodal Vision if API key is available
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("LLM_API_KEY")
+        if api_key:
+            vision_result = self._predict_with_gemini_vision(image_bytes, crop, api_key)
+            if vision_result is not None:
+                return vision_result
+
+        # 2. Computer Vision verification fallback (OpenCV green leaf contour analysis)
+        is_foliage, green_ratio, reason = self._verify_foliage_opencv(image_bytes)
+        if not is_foliage:
+            logger.warning("DiseaseClassifier: OpenCV rejected image as non-foliage (ratio=%.4f)", green_ratio)
+            return {
+                "is_plant_leaf": False,
+                "is_healthy": False,
+                "disease": "Not a Plant Leaf",
+                "confidence": 0.99,
+                "crop": crop,
+                "severity": "LOW",
+                "affected_percentage": 0.0,
+                "rejection_reason": reason,
             }
 
-        Raises:
-            ModelNotLoadedError: if not loaded and not in dev mode.
-        """
-        if not self._loaded:
-            if self._dev_mode:
-                return self._dev_placeholder()
-            raise ModelNotLoadedError(
-                "Classifier not loaded. Check MODEL_PATH env var or set DEV_MODE=true."
-            )
+        # 3. If model weights are loaded, run PyTorch EfficientNet inference
+        if self._loaded:
+            import torch
+            import torch.nn.functional as F
 
-        import torch
-        import torch.nn.functional as F
+            image = self._load_and_preprocess(image_bytes)
+            with torch.no_grad():
+                tensor = self._transform(image).unsqueeze(0).to(self._device)
+                logits = self._model(tensor)
+                probabilities = F.softmax(logits, dim=1).squeeze(0)
 
-        # --- Image preprocessing ---
-        image = self._load_and_preprocess(image_bytes)
+            top_prob, top_idx = probabilities.max(dim=0)
+            confidence = float(top_prob.cpu().numpy())
+            class_idx = int(top_idx.cpu().numpy())
+            detected_crop, disease = PLANTVILLAGE_CLASSES[class_idx]
 
-        with torch.no_grad():
-            # Add batch dimension: [1, 3, 224, 224]
-            tensor = self._transform(image).unsqueeze(0).to(self._device)
+            is_healthy = "healthy" in disease.lower()
+            return {
+                "is_plant_leaf": True,
+                "is_healthy": is_healthy,
+                "disease": f"{detected_crop} {disease}" if not disease.startswith(detected_crop) else disease,
+                "confidence": round(confidence, 4),
+                "crop": detected_crop,
+                "severity": "LOW" if is_healthy else "MODERATE",
+                "affected_percentage": 0.0 if is_healthy else 15.0,
+            }
 
-            # Forward pass
-            logits = self._model(tensor)
+        # 4. Fallback in DEV_MODE with intelligent greenness heuristics
+        if self._dev_mode:
+            return self._dev_placeholder(green_ratio, crop)
 
-            # Softmax → probability distribution over 38 classes
-            probabilities = F.softmax(logits, dim=1).squeeze(0)
-
-        # Top-1 prediction
-        top_prob, top_idx = probabilities.max(dim=0)
-        confidence = float(top_prob.cpu().numpy())
-        class_idx = int(top_idx.cpu().numpy())
-
-        crop, disease = PLANTVILLAGE_CLASSES[class_idx]
-
-        logger.info(
-            f"DiseaseClassifier: predicted '{disease}' on '{crop}' "
-            f"with confidence={confidence:.3f}"
+        raise ModelNotLoadedError(
+            "Classifier not loaded. Check MODEL_PATH env var or set DEV_MODE=true."
         )
 
+    def _predict_with_gemini_vision(self, image_bytes: bytes, expected_crop: str, api_key: str) -> Optional[dict]:
+        """Perform zero-shot multimodal vision diagnosis using Google Gemini 2.5."""
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel("gemini-2.5-flash")
+
+            image = Image.open(io.BytesIO(image_bytes))
+            if image.mode != "RGB":
+                image = image.convert("RGB")
+
+            prompt = (
+                f"You are an expert plant pathologist and computer vision inspector for the AgriNova system.\n"
+                f"Selected Crop by Farmer: {expected_crop}\n\n"
+                f"TASK 1: Foliage Verification\n"
+                f"Carefully examine if this image is actually a plant leaf, crop foliage, or agricultural plant.\n"
+                f"If the image is a person, human face, skin, animal, pet, vehicle, indoor furniture, drawing, "
+                f"screenshot, or non-plant object, set 'is_plant_leaf' to false, and provide a clear 'rejection_reason'.\n\n"
+                f"TASK 2: Health & Pathogen Diagnosis (ONLY if is_plant_leaf is true)\n"
+                f"- Determine if the foliage is HEALTHY or DISEASED.\n"
+                f"- If HEALTHY:\n"
+                f"    disease: 'Healthy Leaf'\n"
+                f"    is_healthy: true\n"
+                f"    severity: 'LOW'\n"
+                f"    affected_percentage: 0.0\n"
+                f"- If DISEASED:\n"
+                f"    Identify the specific plant disease (e.g. 'Early Blight', 'Late Blight', 'Bacterial Spot', 'Leaf Mold', 'Powdery Mildew', 'Septoria Leaf Spot', etc.).\n"
+                f"    disease: '{expected_crop} ' + disease_name (or specific disease name)\n"
+                f"    is_healthy: false\n"
+                f"    severity: 'LOW' | 'MODERATE' | 'HIGH'\n"
+                f"    affected_percentage: float between 1.0 and 99.0\n\n"
+                f"Respond ONLY with valid JSON in this exact structure:\n"
+                f"{{\n"
+                f'  "is_plant_leaf": true,\n'
+                f'  "is_healthy": true,\n'
+                f'  "detected_crop": "{expected_crop}",\n'
+                f'  "disease": "Healthy Leaf",\n'
+                f'  "confidence": 0.95,\n'
+                f'  "severity": "LOW",\n'
+                f'  "affected_percentage": 0.0,\n'
+                f'  "rejection_reason": "",\n'
+                f'  "diagnosis_summary": "Short explanation of visual symptoms"\n'
+                f"}}"
+            )
+
+            res = model.generate_content([prompt, image])
+            text = res.text.strip()
+            if text.startswith("```json"):
+                text = text[7:]
+            if text.startswith("```"):
+                text = text[3:]
+            if text.endswith("```"):
+                text = text[:-3]
+            parsed = json.loads(text.strip())
+
+            is_plant = bool(parsed.get("is_plant_leaf", True))
+            if not is_plant:
+                return {
+                    "is_plant_leaf": False,
+                    "is_healthy": False,
+                    "disease": "Not a Plant Leaf",
+                    "confidence": float(parsed.get("confidence", 0.99)),
+                    "crop": expected_crop,
+                    "severity": "LOW",
+                    "affected_percentage": 0.0,
+                    "rejection_reason": parsed.get("rejection_reason") or (
+                        "The uploaded image does not appear to be a crop leaf or plant foliage (human face, animal, or non-plant object detected)."
+                    ),
+                    "notes": parsed.get("diagnosis_summary", ""),
+                }
+
+            is_healthy = bool(parsed.get("is_healthy", False))
+            disease_name = parsed.get("disease", "Healthy Leaf" if is_healthy else f"{expected_crop} Early Blight")
+            if is_healthy:
+                disease_name = f"Healthy {expected_crop} Leaf"
+
+            return {
+                "is_plant_leaf": True,
+                "is_healthy": is_healthy,
+                "disease": disease_name,
+                "confidence": round(float(parsed.get("confidence", 0.92)), 4),
+                "crop": parsed.get("detected_crop") or expected_crop,
+                "severity": parsed.get("severity", "LOW" if is_healthy else "MODERATE"),
+                "affected_percentage": float(parsed.get("affected_percentage", 0.0 if is_healthy else 12.0)),
+                "rejection_reason": "",
+                "notes": parsed.get("diagnosis_summary", ""),
+            }
+
+        except Exception as exc:
+            logger.warning("Gemini Vision diagnosis failed (%s). Falling back to local engine.", exc)
+            return None
+
+    def _verify_foliage_opencv(self, image_bytes: bytes) -> tuple[bool, float, str]:
+        """Fast computer vision heuristic to verify if the image contains green plant foliage."""
+        try:
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img is None:
+                return False, 0.0, "Invalid or corrupted image format."
+
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            # Green leaf HSV color range
+            lower_green = np.array([25, 35, 35])
+            upper_green = np.array([90, 255, 255])
+            mask = cv2.inRange(hsv, lower_green, upper_green)
+            green_ratio = float(cv2.countNonZero(mask) / (img.shape[0] * img.shape[1]))
+
+            if green_ratio < 0.05:
+                return (
+                    False,
+                    green_ratio,
+                    "No crop leaf or foliage detected in the photo. Please upload a clear photo of plant foliage.",
+                )
+            return True, green_ratio, ""
+        except Exception as err:
+            logger.warning("OpenCV foliage check error: %s", err)
+            return True, 0.5, ""
+
+    def _dev_placeholder(self, green_ratio: float = 0.5, crop: str = "Tomato") -> dict:
+        """Intelligent development placeholder based on greenness."""
+        logger.debug("DiseaseClassifier: returning DEV placeholder prediction")
+        if green_ratio > 0.55:
+            return {
+                "is_plant_leaf": True,
+                "is_healthy": True,
+                "disease": f"Healthy {crop} Leaf",
+                "confidence": 0.96,
+                "crop": crop,
+                "severity": "LOW",
+                "affected_percentage": 0.0,
+                "_dev_mode": True,
+            }
         return {
-            "disease": disease,
-            "confidence": round(confidence, 4),
+            "is_plant_leaf": True,
+            "is_healthy": False,
+            "disease": f"{crop} Early Blight",
+            "confidence": 0.91,
             "crop": crop,
+            "severity": "MODERATE",
+            "affected_percentage": 14.5,
+            "_dev_mode": True,
         }
 
     def _load_and_preprocess(self, image_bytes: bytes) -> "Image.Image":
@@ -247,19 +414,6 @@ class DiseaseClassifier:
             image = image.convert("RGB")
 
         return image
-
-    def _dev_placeholder(self) -> dict:
-        """
-        Development-mode placeholder prediction.
-        Clearly labelled — never returned silently.
-        """
-        logger.debug("DiseaseClassifier: returning DEV placeholder prediction")
-        return {
-            "disease": "Tomato Early Blight",
-            "confidence": 0.91,
-            "crop": "Tomato",
-            "_dev_mode": True,
-        }
 
     @property
     def is_loaded(self) -> bool:

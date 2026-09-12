@@ -70,10 +70,11 @@ export default function NewReport() {
 
     try {
       const response = await createReport(formData);
-      const reportId = response.data?.id;
+      const reportId = response?.data?.id || response?.id || response?.data?.data?.id;
+      const farmId = response?.data?.farm_id || response?.farm_id || response?.data?.data?.farm_id;
 
-      if (response.data?.farm_id) {
-        localStorage.setItem('agrishield_farm_id', response.data.farm_id);
+      if (farmId) {
+        localStorage.setItem('agrishield_farm_id', farmId);
       }
 
       setSubmitState(SUBMIT_STATES.SUCCESS);
@@ -211,9 +212,26 @@ export default function NewReport() {
 
           {/* Error Banner */}
           {submitState === SUBMIT_STATES.ERROR && (
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span>{submitError}</span>
+            <div className="rounded-xl bg-red-500/10 border border-red-500/40 p-4.5 text-xs text-red-200 shadow-lg space-y-2.5">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <h4 className="font-bold text-red-300 text-sm">
+                    Image Verification Failed / Scan Rejected
+                  </h4>
+                  <p className="text-red-200/90 leading-relaxed font-medium">
+                    {submitError}
+                  </p>
+                </div>
+              </div>
+              <div className="bg-red-950/40 rounded-lg p-3 border border-red-500/20 text-[11px] text-red-300/80 space-y-1">
+                <p className="font-semibold text-red-300">💡 Image Upload Guidelines:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-red-200/75">
+                  <li>Upload a clear, well-lit photo of actual plant foliage or crop leaves.</li>
+                  <li>Images of human faces, pets, vehicles, or non-plant objects are rejected to prevent invalid reports.</li>
+                  <li>If the leaf is healthy and disease-free, upload it clearly and AgriNova will certify it as healthy.</li>
+                </ul>
+              </div>
             </div>
           )}
 

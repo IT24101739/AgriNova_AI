@@ -130,6 +130,42 @@ async def generate_treatment_advice(
             "warning":         str | None,
         }
     """
+    # If leaf is diagnosed as healthy
+    if "healthy" in disease.lower():
+        if language == "si":
+            return {
+                "language": "si",
+                "diagnosis_text": "සුබ ආරංචියක්! ඔබගේ ශාක පත්‍ර නිරෝගීව පවතින අතර, කිසිදු දිලීර හෝ බැක්ටීරියා රෝග ලක්ෂණයක් හඳුනාගෙන නොමැත.",
+                "treatment_steps": [
+                    "ශාකයට අවශ්‍ය ප්‍රමාණයට නිසි ලෙස ජලය සපයන්න, මුල් කුණුවීම වැළැක්වීමට අධික ජලය බැසයාම තහවුරු කරන්න.",
+                    "වර්ධන අවධියට ගැළපෙන කාබනික හෝ සමබර NPK පොහොර යොදන්න.",
+                    "රෝග හෝ පළිබෝධකයන් කල්තියා හඳුනාගැනීම සඳහා සතිපතා පත්‍ර පරීක්ෂාව දිගටම කරගෙන යන්න.",
+                ],
+                "warning": None,
+            }
+        elif language == "ta":
+            return {
+                "language": "ta",
+                "diagnosis_text": "நல்ல செய்தி! உங்கள் பயிர் இலை ஆரோக்கியமாக உள்ளது, பூஞ்சை அல்லது பாக்டீரியா நோய் அறிகுறிகள் எதுவும் தென்படவில்லை.",
+                "treatment_steps": [
+                    "வழக்கமான நீர்ப்பாசனத்தைப் பராமரிக்கவும்; வேர் அழுகலைத் தவிர்க்க அதிகப்படியான நீர் தேங்குவதைத் தடுக்கவும்.",
+                    "வளர்ச்சி நிலைக்கு ஏற்ப சமச்சீர் கரிம அல்லது NPK உரங்களைப் பயன்படுத்தவும்.",
+                    "பூச்சிகள் மற்றும் ஆரம்பகால நோய்களைக் கண்டறிய வாராந்திர இலை சோதனையைத் தொடரவும்.",
+                ],
+                "warning": None,
+            }
+        else:
+            return {
+                "language": "en",
+                "diagnosis_text": "Great news! Your plant foliage is completely healthy with no detectable signs of fungal or bacterial disease.",
+                "treatment_steps": [
+                    "Maintain standard drip irrigation and ensure good soil drainage to protect root health.",
+                    "Continue recommended organic compost or balanced NPK fertilizing according to the crop growth stage.",
+                    "Conduct routine weekly crop scouting to catch any early signs of pest pressure or environmental stress.",
+                ],
+                "warning": None,
+            }
+
     guidance = _load_guidance()
     disease_info = _find_guidance(disease, guidance)
 

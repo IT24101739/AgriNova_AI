@@ -39,7 +39,11 @@ const TreatmentSteps = ({ advice = {}, isLoading = false }) => {
       <div className="flex items-center justify-between p-5 pb-0">
         <div className="flex items-center gap-2">
           <span className="text-xl">🌿</span>
-          <h3 className="text-white font-semibold text-sm">Treatment Steps</h3>
+          <h3 className="text-white font-semibold text-sm">
+            {diagnosis_text && (diagnosis_text.toLowerCase().includes('healthy') || diagnosis_text.toLowerCase().includes('නිරෝගී') || diagnosis_text.toLowerCase().includes('ஆரோக்கியமான'))
+              ? "Plant Care & Maintenance Guidelines"
+              : "Treatment Steps"}
+          </h3>
           {language && language !== "en" && (
             <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
               {language === "si" ? "සිංහල" : language === "ta" ? "தமிழ்" : language}

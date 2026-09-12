@@ -155,9 +155,13 @@ export default function ReportStatus() {
         {/* Results (shown when IMAGE_ANALYZED or beyond) */}
         {!isAnalyzing && report?.status !== 'FAILED' && analysis && (
           <>
-            {/* Disease card */}
+            {/* Disease / Health status card */}
             <div className="agri-card animate-fade-up delay-1">
-              <p className="form-label" style={{ marginBottom: '0.5rem' }}>🦠 Detected Disease</p>
+              <p className="form-label" style={{ marginBottom: '0.5rem' }}>
+                {analysis.is_healthy || (analysis.disease && analysis.disease.toLowerCase().includes('healthy'))
+                  ? '🌿 Plant Health Status'
+                  : '🦠 Detected Disease'}
+              </p>
               <h2
                 style={{
                   fontWeight: 800,
@@ -169,6 +173,19 @@ export default function ReportStatus() {
               >
                 {analysis.disease || 'Unknown'}
               </h2>
+              {(analysis.is_healthy || (analysis.disease && analysis.disease.toLowerCase().includes('healthy'))) && (
+                <div style={{
+                  padding: '0.6rem 0.85rem',
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  marginBottom: '0.75rem',
+                }}>
+                  <p style={{ color: '#34d399', fontSize: '0.8rem', fontWeight: 600 }}>
+                    ✓ No active fungal or bacterial pathogens detected. Leaf tissue is healthy and thriving.
+                  </p>
+                </div>
+              )}
 
               {/* Confidence bar */}
               {analysis.confidence !== null && (

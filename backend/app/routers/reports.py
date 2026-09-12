@@ -112,6 +112,12 @@ async def submit_report(
             image_filename=image.filename or "upload.jpg",
         )
 
+    except ValueError as e:
+        logger.warning(f"Report rejected: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
     except RuntimeError as e:
         logger.error(f"Report creation failed: {e}")
         raise HTTPException(

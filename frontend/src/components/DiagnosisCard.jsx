@@ -42,13 +42,24 @@ const DECISION_CONFIG = {
 };
 
 const DiagnosisCard = ({ disease, confidence, decision = "AUTO_ADVICE", reasons = [] }) => {
-  const config = DECISION_CONFIG[decision] || DECISION_CONFIG.AUTO_ADVICE;
+  const isHealthy = Boolean(disease && disease.toLowerCase().includes("healthy"));
+  const config = isHealthy
+    ? {
+        label: "Verified Healthy Foliage",
+        bg: "bg-emerald-500/25",
+        border: "border-emerald-400/50",
+        text: "text-emerald-300 font-bold",
+        dot: "bg-emerald-400",
+        icon: "🌿",
+      }
+    : (DECISION_CONFIG[decision] || DECISION_CONFIG.AUTO_ADVICE);
+
   const confidencePct = Math.round((confidence || 0) * 100);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/50 p-6 shadow-xl">
+    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border ${isHealthy ? 'border-emerald-500/40 shadow-emerald-950/40' : 'border-slate-700/50'} p-6 shadow-xl`}>
       {/* Background decoration */}
-      <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/5 rounded-full -translate-y-20 translate-x-20 blur-2xl" />
+      <div className={`absolute top-0 right-0 w-40 h-40 ${isHealthy ? 'bg-emerald-400/10' : 'bg-emerald-500/5'} rounded-full -translate-y-20 translate-x-20 blur-2xl`} />
 
       {/* Decision badge */}
       <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold mb-4 ${config.bg} ${config.border} ${config.text}`}>
@@ -56,11 +67,13 @@ const DiagnosisCard = ({ disease, confidence, decision = "AUTO_ADVICE", reasons 
         <span>{config.icon} {config.label}</span>
       </div>
 
-      {/* Disease name */}
+      {/* Disease / Health status name */}
       <h2 className="text-2xl font-bold text-white leading-tight mb-1">
         {disease || "Unknown Disease"}
       </h2>
-      <p className="text-slate-400 text-sm mb-4">Predicted crop disease</p>
+      <p className="text-slate-400 text-sm mb-4">
+        {isHealthy ? "Crop foliage health verification — No pathogens detected" : "Predicted crop disease"}
+      </p>
 
       {/* Confidence inline display */}
       <div className="flex items-center gap-3">
