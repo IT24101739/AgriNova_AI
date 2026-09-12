@@ -395,57 +395,62 @@ export default function LoginPage() {
             {/* ── Main Form Card ── */}
             <div className="glass-elevated rounded-2xl p-6 sm:p-7 border border-emerald-500/25 shadow-2xl space-y-5">
               
-              {/* Role Selector Tabs */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 p-1 rounded-xl bg-black/40 border border-emerald-500/20 text-xs font-semibold gap-1">
-                <button
-                  type="button"
-                  onClick={() => handleRoleChange('farmer')}
-                  className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                    selectedRole === 'farmer'
-                      ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-md font-bold'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <span>🌾</span>
-                  <span className="truncate">{authMode === 'signup' ? 'Farmer' : 'Farmer'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleRoleChange('officer')}
-                  className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                    selectedRole === 'officer'
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md font-bold'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <span>🛡️</span>
-                  <span className="truncate">{authMode === 'signup' ? 'Officer' : 'Officer'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleRoleChange('lab')}
-                  className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                    selectedRole === 'lab'
-                      ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-md font-bold'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <span>🔬</span>
-                  <span className="truncate">{authMode === 'signup' ? 'Lab' : 'Research Lab'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleRoleChange('admin')}
-                  className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                    selectedRole === 'admin'
-                      ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md font-bold'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <span>⚙️</span>
-                  <span className="truncate">{authMode === 'signup' ? 'Admin' : 'Admin'}</span>
-                </button>
-              </div>
+              {/* Role Selector Tabs (Only in Sign Up Mode to avoid duplication with demo role cards) */}
+              {authMode === 'signup' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Select Account Role</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 p-1 rounded-xl bg-black/40 border border-emerald-500/20 text-xs font-semibold gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleRoleChange('farmer')}
+                      className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                        selectedRole === 'farmer'
+                          ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-md font-bold'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <span>🌾</span>
+                      <span className="truncate">Farmer</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRoleChange('officer')}
+                      className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                        selectedRole === 'officer'
+                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md font-bold'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <span>🛡️</span>
+                      <span className="truncate">Officer</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRoleChange('lab')}
+                      className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                        selectedRole === 'lab'
+                          ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-md font-bold'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <span>🔬</span>
+                      <span className="truncate">Research Lab</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRoleChange('admin')}
+                      className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                        selectedRole === 'admin'
+                          ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md font-bold'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <span>⚙️</span>
+                      <span className="truncate">Admin</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Feedback messages */}
               {error && (

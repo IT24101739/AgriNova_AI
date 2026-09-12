@@ -313,56 +313,9 @@ const DiagnosisResult = () => {
             />
 
             {/* 2. Badges row */}
-            <div className="grid grid-cols-1 gap-3">
-              <div className="flex flex-wrap gap-2 items-center">
-                <SeverityBadge severity={data.severity} />
-              </div>
+            <div className="flex flex-wrap gap-2.5 items-center">
+              <SeverityBadge severity={data.severity} />
               <SpreadRiskBadge spreadRisk={data.spread_risk} />
-
-              {/* Top Quick Officer Request Banner */}
-              <div className="flex items-center justify-between p-3.5 rounded-xl bg-blue-950/50 border border-blue-500/30 shadow-lg">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
-                    <ShieldAlert className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-white">
-                      {ticketState.requested ? "Officer Review Dispatched" : "Need An Agriculture Officer?"}
-                    </p>
-                    <p className="text-[10px] text-slate-300">
-                      {ticketState.requested
-                        ? "Extension officer has been notified for your farm."
-                        : "Request in-person inspection or sample testing."}
-                    </p>
-                  </div>
-                </div>
-
-                {ticketState.requested ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold shadow-sm">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Ticket Active</span>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleRequestOfficerTicket}
-                    disabled={ticketState.loading}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-blue-500/25 active:scale-95 transition-all cursor-pointer"
-                  >
-                    {ticketState.loading ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Sending…</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserCheck className="w-3.5 h-3.5 text-blue-200" />
-                        <span>Request Officer</span>
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
             </div>
 
             {/* 3. Confidence gauge */}
