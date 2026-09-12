@@ -412,3 +412,58 @@ def get_dashboard_stats() -> dict[str, Any]:
         "outbreak_alerts_possible": 0,
         "outbreak_alerts_confirmed": outbreaks_confirmed,
     }
+
+
+def delete_ticket(ticket_id: str) -> bool:
+    """Cascade delete an officer ticket and its associated field visits and lab requests."""
+    # 1. Supabase cascade delete
+    try:
+        db = get_supabase()
+        db.table("lab_requests").delete().eq("ticket_id", str(ticket_id)).execute()
+        db.table("field_visits").delete().eq("ticket_id", str(ticket_id)).execute()
+        db.table("officer_tickets").delete().eq("id", str(ticket_id)).execute()
+        logger.info("Deleted ticket %s from Supabase", ticket_id)
+    except Exception as exc:
+        logger.warning("Supabase delete_ticket error: %s", exc)
+
+    # 2. Local ORM delete
+    try:
+        session = SessionLocal()
+        try:
+            tid = uuid.UUID(str(ticket_id))
+            session.query(LabRequest).filter(LabRequest.ticket_id == tid).delete()
+            session.query(FieldVisit).filter(FieldVisit.ticket_id == tid).delete()
+            session.query(OfficerTicket).filter(OfficerTicket.id == tid).delete()
+            session.commit()
+        except ValueError:
+            pass
+        finally:
+            session.close()
+    except Exception as exc:
+        logger.error("ORM delete_ticket error: %s", exc)
+
+    return True
+
+
+def delete_field_visit(visit_id: str) -> bool:
+    """Delete a single field visit record."""
+    try:
+        db = get_supabase()
+        db.table("field_visits").delete().eq("id", str(visit_id)).execute()
+    except Exception as exc:
+        logger.warning("Supabase delete_field_visit error: %s", exc)
+
+    try:
+        session = SessionLocal()
+        try:
+            vid = uuid.UUID(str(visit_id))
+            session.query(FieldVisit).filter(FieldVisit.id == vid).delete()
+            session.commit()
+        except ValueError:
+            pass
+        finally:
+            session.close()
+    except Exception as exc:
+        logger.error("ORM delete_field_visit error: %s", exc)
+
+    return True

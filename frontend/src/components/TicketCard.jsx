@@ -51,8 +51,12 @@ export default function TicketCard({ ticket, onDeleted, onStatusUpdated }) {
     if (!window.confirm('Delete this ticket? This cannot be undone.')) return;
     setDeleting(true);
     try {
-      await fetch(`${API_BASE}/api/officer/tickets/${ticket.id}`, { method: 'DELETE' });
-      onDeleted?.(ticket.id);
+      const res = await fetch(`${API_BASE}/api/officer/tickets/${ticket.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        onDeleted?.(ticket.id);
+      } else {
+        alert('Failed to delete ticket from server');
+      }
     } catch (err) {
       console.error('Delete ticket error:', err);
       alert('Failed to delete ticket. Please try again.');

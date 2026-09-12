@@ -59,8 +59,12 @@ export default function TicketTable({ tickets = [], loading, onDeleted, onStatus
     if (!window.confirm('Delete this ticket? This cannot be undone.')) return;
     setDeletingId(ticketId);
     try {
-      await fetch(`${API_BASE}/api/officer/tickets/${ticketId}`, { method: 'DELETE' });
-      onDeleted?.(ticketId);
+      const res = await fetch(`${API_BASE}/api/officer/tickets/${ticketId}`, { method: 'DELETE' });
+      if (res.ok) {
+        onDeleted?.(ticketId);
+      } else {
+        alert('Failed to delete ticket from server');
+      }
     } catch (err) {
       console.error('Delete ticket error:', err);
       alert('Failed to delete ticket. Please try again.');

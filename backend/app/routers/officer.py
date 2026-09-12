@@ -29,6 +29,8 @@ from app.schemas.ticket_schema import CreateTicketRequest, TicketUpdateRequest
 from app.services import ai_feedback_service, notification_service, outbreak_service
 from app.services.ticket_service import (
     create_officer_ticket,
+    delete_field_visit,
+    delete_ticket,
     get_dashboard_stats,
     get_ticket_detail,
     get_tickets,
@@ -157,6 +159,20 @@ def patch_ticket(ticket_id: str, body: TicketUpdateRequest):
         raise HTTPException(status_code=400, detail="No fields to update")
     result = update_ticket(ticket_id, updates)
     return ok(result)
+
+
+@router.delete("/tickets/{ticket_id}")
+def remove_ticket(ticket_id: str):
+    """Delete an officer ticket and its associated records."""
+    delete_ticket(ticket_id)
+    return ok({"ticket_id": ticket_id}, "Ticket deleted successfully")
+
+
+@router.delete("/field-visits/{visit_id}")
+def remove_field_visit(visit_id: str):
+    """Delete a field visit record."""
+    delete_field_visit(visit_id)
+    return ok({"visit_id": visit_id}, "Field visit deleted successfully")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
