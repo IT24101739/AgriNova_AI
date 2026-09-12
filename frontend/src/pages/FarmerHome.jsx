@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getFarmReports } from '../services/api';
+import { getFarmReports, getReports } from '../services/api';
 import ReportCard from '../components/ReportCard';
 import {
   Leaf,
@@ -27,24 +27,35 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const DEMO_FARM_ID = localStorage.getItem('agrishield_farm_id') || 'farm-gampaha-01';
-
 export default function FarmerHome() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [reports, setReports] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filterMode, setFilterMode] = useState('all');
+
+  const fetchReports = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const farmerId = (filterMode === 'my' && (user?.farmer_id || user?.id))
+        ? (user.farmer_id || user.id)
+        : undefined;
+
+      const res = await getReports(farmerId ? { farmer_id: farmerId } : { limit: 50 });
+      setReports(res?.data?.reports || []);
+    } catch (err) {
+      console.error('Failed to load past reports from Supabase:', err);
+      setError('Could not load reports from Supabase database.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (DEMO_FARM_ID) {
-      setLoading(true);
-      getFarmReports(DEMO_FARM_ID)
-        .then((res) => setReports(res.data?.reports || []))
-        .catch(() => setError('Could not load reports.'))
-        .finally(() => setLoading(false));
-    }
-  }, []);
+    fetchReports();
+  }, [user, filterMode]);
 
   return (
     <div className="min-h-screen bg-[#05130b] text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white pb-16">
@@ -380,23 +391,63 @@ export default function FarmerHome() {
           </div>
         </div>
 
-        {/* ── My Crop Reports History ── */}
+        {/* ── My Crop Reports History (from Supabase Database) ── */}
         <section>
-          <div className="flex items-center justify-between mb-6 pb-3 border-b border-emerald-500/20">
-            <div className="flex items-center gap-2">
-              <History className="w-5 h-5 text-emerald-400" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-3 border-b border-emerald-500/20">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <History className="w-5 h-5" />
+              </div>
               <div>
-                <h2 className="text-lg font-bold text-white">My Crop Diagnosis Reports</h2>
-                <p className="text-xs text-slate-400">Records of your uploaded leaf images and AI results</p>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-white">My Crop Diagnosis Reports</h2>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-950/80 border border-emerald-500/35 text-emerald-300">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Supabase Database
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">
+                  {reports.length} past diagnostic report{reports.length === 1 ? '' : 's'} recorded in your database
+                </p>
               </div>
             </div>
-            <button
-              onClick={() => navigate('/reports/new')}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/30 hover:bg-emerald-900/80 transition-all"
-            >
-              <Camera className="w-3.5 h-3.5" />
-              <span>New Scan</span>
-            </button>
+
+            <div className="flex items-center flex-wrap gap-2.5">
+              <div className="inline-flex rounded-xl p-1 bg-black/40 border border-white/10 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setFilterMode('all')}
+                  className={`px-3 py-1 rounded-lg transition-all ${
+                    filterMode === 'all'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  All Scans ({reports.length})
+                </button>
+                {user && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterMode('my')}
+                    className={`px-3 py-1 rounded-lg transition-all ${
+                      filterMode === 'my'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    My Farm Scans
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={() => navigate('/reports/new')}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/30 hover:bg-emerald-900/80 transition-all"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>New Scan</span>
+              </button>
+            </div>
           </div>
 
           {loading && (

@@ -158,6 +158,47 @@ def get_report(
 
     report = report_service.get_report(db, report_uuid)
     if not report:
+        # Check Supabase database
+        try:
+            from app.database import get_supabase
+            sb = get_supabase()
+            sb_res = sb.table("reports").select("*, farms(*), analysis_results(*)").eq("id", str(report_uuid)).execute()
+            if sb_res.data and len(sb_res.data) > 0:
+                r = sb_res.data[0]
+                farm_data = r.get("farms") or {}
+                raw_analysis = r.get("analysis_results") or {}
+                if isinstance(raw_analysis, list) and len(raw_analysis) > 0:
+                    raw_analysis = raw_analysis[0]
+                elif not isinstance(raw_analysis, dict):
+                    raw_analysis = {}
+
+                return {
+                    "success": True,
+                    "data": {
+                        "id": str(r.get("id")),
+                        "farm_id": str(r.get("farm_id")),
+                        "crop": r.get("crop"),
+                        "latitude": farm_data.get("latitude") if isinstance(farm_data, dict) else None,
+                        "longitude": farm_data.get("longitude") if isinstance(farm_data, dict) else None,
+                        "district": farm_data.get("district") if isinstance(farm_data, dict) else None,
+                        "description": r.get("description"),
+                        "image_url": r.get("image_url"),
+                        "preferred_language": r.get("preferred_language", "en"),
+                        "status": r.get("status", "IMAGE_ANALYZED"),
+                        "created_at": r.get("created_at"),
+                        "image_analysis": {
+                            "disease": raw_analysis.get("disease") or r.get("disease"),
+                            "confidence": raw_analysis.get("disease_confidence") or r.get("confidence"),
+                            "severity": raw_analysis.get("severity") or r.get("severity"),
+                            "affected_percentage": raw_analysis.get("affected_percentage"),
+                            "spread_risk": raw_analysis.get("spread_risk") or r.get("spread_risk"),
+                        },
+                    },
+                    "message": "",
+                }
+        except Exception as sb_err:
+            logger.debug("Supabase lookup fallback: %s", sb_err)
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Report {report_id} not found.",
@@ -175,6 +216,52 @@ def get_report(
 
 
 # ---------------------------------------------------------------------------
+# GET /api/reports  — Fetch reports from Supabase database
+# ---------------------------------------------------------------------------
+
+@router.get("/reports")
+def list_reports(
+    farmer_id: Optional[str] = None,
+    farm_id: Optional[str] = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    """
+    List past crop diagnosis reports taken directly from the Supabase database.
+    Optional query filters: farmer_id, farm_id.
+    """
+    farmer_uuid = None
+    if farmer_id:
+        try:
+            farmer_uuid = uuid.UUID(farmer_id)
+        except ValueError:
+            logger.debug("Non-UUID farmer_id provided (%s), skipping filter", farmer_id)
+
+    farm_uuid = None
+    if farm_id:
+        try:
+            farm_uuid = uuid.UUID(farm_id)
+        except ValueError:
+            logger.debug("Non-UUID farm_id provided (%s), skipping filter", farm_id)
+
+    reports = report_service.get_reports_from_supabase(
+        db=db,
+        farmer_id=farmer_uuid,
+        farm_id=farm_uuid,
+        limit=limit,
+    )
+
+    return {
+        "success": True,
+        "data": {
+            "reports": reports,
+            "count": len(reports),
+        },
+        "message": f"Retrieved {len(reports)} reports from Supabase database.",
+    }
+
+
+# ---------------------------------------------------------------------------
 # GET /api/farms/{farm_id}/reports
 # ---------------------------------------------------------------------------
 
@@ -183,18 +270,19 @@ def get_farm_reports(
     farm_id: str,
     db: Session = Depends(get_db),
 ):
-    """List all reports for a given farm, newest first."""
+    """List all reports for a given farm, taking data from Supabase."""
+    farm_uuid = None
     try:
         farm_uuid = uuid.UUID(farm_id)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid farm_id UUID format.")
+        pass
 
-    reports = report_service.get_farm_reports(db, farm_uuid)
+    reports = report_service.get_reports_from_supabase(db=db, farm_id=farm_uuid)
 
     return {
         "success": True,
         "data": {
-            "reports": [_serialize_list_item(r) for r in reports],
+            "reports": reports,
             "count": len(reports),
         },
         "message": "",

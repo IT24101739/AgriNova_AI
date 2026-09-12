@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createReport } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 import CropSelector from '../components/CropSelector';
 import ImageUploader from '../components/ImageUploader';
@@ -13,7 +14,7 @@ import LanguageSelector from '../components/LanguageSelector';
 import LocationSelector from '../components/LocationSelector';
 import { ArrowLeft, Sparkles, CheckCircle2, AlertCircle, Camera, Shield } from 'lucide-react';
 
-const DEMO_FARMER_ID = localStorage.getItem('agrishield_farmer_id') || '00000000-0000-0000-0000-000000000001';
+const FALLBACK_FARMER_ID = '00000000-0000-0000-0000-000000000001';
 
 const SUBMIT_STATES = {
   IDLE:      'idle',
@@ -25,6 +26,7 @@ const SUBMIT_STATES = {
 
 export default function NewReport() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Form state
   const [crop, setCrop]             = useState('');
@@ -61,7 +63,8 @@ export default function NewReport() {
     setSubmitState(SUBMIT_STATES.UPLOADING);
 
     const formData = new FormData();
-    formData.append('farmer_id', DEMO_FARMER_ID);
+    const activeFarmerId = user?.farmer_id || user?.id || localStorage.getItem('agrishield_farmer_id') || FALLBACK_FARMER_ID;
+    formData.append('farmer_id', activeFarmerId);
     formData.append('crop', crop);
     formData.append('description', description);
     formData.append('preferred_language', language);

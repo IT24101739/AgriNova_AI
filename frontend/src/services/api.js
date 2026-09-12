@@ -98,4 +98,14 @@ export async function getFarmReports(farmId) {
   return res.data;
 }
 
+/**
+ * List crop diagnosis reports directly from Supabase database.
+ * @param {Object} [params] - Optional filters: { farmer_id, farm_id, limit }
+ * @returns {Promise<{success: boolean, data: {reports: [], count: number}}>}
+ */
+export async function getReports(params = {}) {
+  const res = await api.get('/reports', { params });
+  return res.data;
+}
+
 export default api;
