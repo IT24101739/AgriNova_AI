@@ -5,27 +5,27 @@
 
 :root {
   color-scheme: dark;
+  --agri-bg:       #05130b;
+  --agri-surface:  #0a1f13;
+  --agri-border:   rgba(34,197,94,0.14);
+  --agri-green:    #22c55e;
+  --agri-lime:     #a3e635;
+  --agri-amber:    #fbbf24;
+  --agri-muted:    #94a3b8;
 }
 
-/* ── Selection ───────────────────────────────────────────────── */
-::selection {
-  background-color: rgba(34, 197, 94, 0.35);
-  color: #ffffff;
-}
-::-moz-selection {
-  background-color: rgba(34, 197, 94, 0.35);
-  color: #ffffff;
-}
+/* ── Selection ──────────────────────────────────────────────────────── */
+::selection         { background-color: rgba(34,197,94,0.35); color:#fff; }
+::-moz-selection    { background-color: rgba(34,197,94,0.35); color:#fff; }
 
-/* ── Reset & Base ─────────────────────────────────────────────── */
+/* ── Reset & Base ───────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
-
 html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
   font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
-  background-color: #05130b;
+  background-color: var(--agri-bg);
   color: #e2e8f0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -38,28 +38,28 @@ body {
   flex-direction: column;
 }
 
-/* ── Scrollbar ───────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #07170e; }
-::-webkit-scrollbar-thumb { background: #166534; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #22c55e; }
+/* ── Scrollbar ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar              { width: 6px; height: 6px; }
+::-webkit-scrollbar-track        { background: #07170e; }
+::-webkit-scrollbar-thumb        { background: #166534; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover  { background: #22c55e; }
 
-/* ── Glass card (Botanical / Agriculture Theme) ───────────────── */
+/* ── Glass cards (Botanical / Agriculture Theme) ────────────────────── */
 .glass {
-  background: rgba(10, 31, 19, 0.82);
+  background: rgba(10,31,19,0.82);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(34, 197, 94, 0.14);
+  border: 1px solid rgba(34,197,94,0.14);
 }
 
 .glass-elevated {
-  background: rgba(15, 43, 27, 0.88);
+  background: rgba(15,43,27,0.88);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(74, 222, 128, 0.22);
+  border: 1px solid rgba(74,222,128,0.22);
 }
 
-/* ── Gradient text ───────────────────────────────────────────── */
+/* ── Gradient text ──────────────────────────────────────────────────── */
 .gradient-text {
   background: linear-gradient(135deg, #4ade80 0%, #a3e635 60%, #fbbf24 100%);
   -webkit-background-clip: text;
@@ -67,13 +67,14 @@ body {
   background-clip: text;
 }
 
-/* ── Glow effects ────────────────────────────────────────────── */
-.glow-green { box-shadow: 0 0 24px rgba(34, 197, 94, 0.3); }
-.glow-red   { box-shadow: 0 0 24px rgba(239, 68, 68, 0.25); }
-.glow-amber { box-shadow: 0 0 24px rgba(245, 158, 11, 0.25); }
-.glow-purple { box-shadow: 0 0 24px rgba(139, 92, 246, 0.25); }
+/* ── Glow effects ───────────────────────────────────────────────────── */
+.glow-green  { box-shadow: 0 0 24px rgba(34,197,94,0.30); }
+.glow-red    { box-shadow: 0 0 24px rgba(239,68,68,0.25); }
+.glow-amber  { box-shadow: 0 0 24px rgba(245,158,11,0.25); }
+.glow-purple { box-shadow: 0 0 24px rgba(139,92,246,0.25); }
+.glow-teal   { box-shadow: 0 0 24px rgba(20,184,166,0.25); }
 
-/* ── Stat card ───────────────────────────────────────────────── */
+/* ── Stat card ──────────────────────────────────────────────────────── */
 .stat-card {
   @apply glass rounded-2xl p-5 transition-all duration-300;
 }
@@ -82,43 +83,31 @@ body {
   border-color: rgba(255,255,255,0.18);
 }
 
-/* ── Table ───────────────────────────────────────────────────── */
-.ag-table { @apply w-full text-sm; }
-.ag-table thead tr { @apply border-b border-white/10; }
-.ag-table thead th { @apply py-3 px-4 text-left text-xs font-semibold uppercase tracking-widest text-slate-400; }
-.ag-table tbody tr {
-  @apply border-b border-white/5 transition-colors duration-150 cursor-pointer;
-}
+/* ── Table ──────────────────────────────────────────────────────────── */
+.ag-table            { @apply w-full text-sm; }
+.ag-table thead tr   { @apply border-b border-white/10; }
+.ag-table thead th   { @apply py-3 px-4 text-left text-xs font-semibold uppercase tracking-widest text-slate-400; }
+.ag-table tbody tr   { @apply border-b border-white/5 transition-colors duration-150 cursor-pointer; }
 .ag-table tbody tr:hover { background: rgba(255,255,255,0.04); }
-.ag-table tbody td { @apply py-3 px-4 text-slate-200; }
+.ag-table tbody td   { @apply py-3 px-4 text-slate-200; }
 
-/* ── Badge ───────────────────────────────────────────────────── */
+/* ── Badge ──────────────────────────────────────────────────────────── */
 .badge {
   @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
 }
 
-/* ── Button ──────────────────────────────────────────────────── */
+/* ── Button ─────────────────────────────────────────────────────────── */
 .btn {
   @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
          transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
 }
-.btn-primary {
-  @apply btn bg-brand-green hover:bg-brand-green-dim text-white shadow-lg;
-}
-.btn-secondary {
-  @apply btn glass hover:bg-white/10 text-slate-200;
-}
-.btn-danger {
-  @apply btn bg-red-600/80 hover:bg-red-600 text-white;
-}
-.btn-amber {
-  @apply btn bg-amber-500/80 hover:bg-amber-500 text-white;
-}
-.btn-purple {
-  @apply btn bg-violet-600/80 hover:bg-violet-600 text-white;
-}
+.btn-primary   { @apply btn bg-brand-green hover:bg-brand-green-dim text-white shadow-lg; }
+.btn-secondary { @apply btn glass hover:bg-white/10 text-slate-200; }
+.btn-danger    { @apply btn bg-red-600/80 hover:bg-red-600 text-white; }
+.btn-amber     { @apply btn bg-amber-500/80 hover:bg-amber-500 text-white; }
+.btn-purple    { @apply btn bg-violet-600/80 hover:bg-violet-600 text-white; }
 
-/* ── Input & Form Controls ───────────────────────────────────── */
+/* ── Input & Form Controls ──────────────────────────────────────────── */
 .ag-input {
   @apply w-full px-3.5 py-2.5 rounded-xl text-sm text-slate-100 placeholder-slate-500
          bg-[#092215]/80 border border-emerald-500/20 outline-none
@@ -135,66 +124,214 @@ body {
   background-size: 1rem 1rem;
   padding-right: 2.5rem !important;
 }
-
 .ag-select:focus {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2322c55e'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M5 15l7-7 7 7'%3e%3c/path%3e%3c/svg%3e");
 }
 
-/* ── Select Dropdown Menu & Options ─────────────────────────── */
+/* ── Select Dropdown Menu & Options ─────────────────────────────────── */
 select option {
   background-color: #071f13 !important;
   color: #f1f5f9 !important;
   font-size: 0.875rem;
   padding: 10px 14px;
 }
-
-select option:checked {
-  background-color: #14532d !important;
-  color: #86efac !important;
-  font-weight: 600;
-}
-
+select option:checked  { background-color: #14532d !important; color: #86efac !important; font-weight: 600; }
 select option:hover,
-select option:focus {
-  background-color: #166534 !important;
-  color: #ffffff !important;
-}
+select option:focus    { background-color: #166534 !important; color: #ffffff !important; }
+select optgroup        { background-color: #05180e !important; color: #94a3b8 !important; font-weight: 700; }
 
-select optgroup {
-  background-color: #05180e !important;
-  color: #94a3b8 !important;
-  font-weight: 700;
-}
-
-/* ── Native Date Picker Indicator ────────────────────────────── */
+/* ── Native Date Picker ─────────────────────────────────────────────── */
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.8) sepia(100%) saturate(300%) hue-rotate(90deg);
-  cursor: pointer;
-  opacity: 0.85;
+  cursor: pointer; opacity: 0.85;
   transition: opacity 0.2s, transform 0.2s;
 }
-input[type="date"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
-  transform: scale(1.1);
+input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity:1; transform: scale(1.1); }
+
+.ag-label { @apply block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5; }
+
+/* ── Confidence bar ─────────────────────────────────────────────────── */
+.conf-bar-track { @apply h-2 rounded-full bg-white/10 overflow-hidden; }
+.conf-bar-fill  { @apply h-full rounded-full transition-all duration-700; }
+
+/* ───────────────────────────────────────────────────────────────────── */
+/*  PAGE HERO — full-width agricultural hero banner                      */
+/* ───────────────────────────────────────────────────────────────────── */
+.page-hero {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+.page-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.22;
+  filter: blur(1px) saturate(1.2);
+  transform: scale(1.04);
+  transition: opacity 0.6s ease;
+}
+.page-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(5,19,11,0.55) 0%,
+    rgba(5,19,11,0.75) 60%,
+    rgba(5,19,11,1.00) 100%
+  );
+}
+.page-hero-content {
+  position: relative;
+  z-index: 10;
+  padding: 2.5rem 1.5rem 3rem;
+  max-width: 80rem;
+  margin: 0 auto;
 }
 
-.ag-label {
-  @apply block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5;
+/* ───────────────────────────────────────────────────────────────────── */
+/*  PAGE SECTION — consistent content section wrapper                    */
+/* ───────────────────────────────────────────────────────────────────── */
+.page-section {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6;
 }
 
-/* ── Confidence bar ──────────────────────────────────────────── */
-.conf-bar-track {
-  @apply h-2 rounded-full bg-white/10 overflow-hidden;
+/* ───────────────────────────────────────────────────────────────────── */
+/*  SECTION TITLE — standardized heading with decorative accent          */
+/* ───────────────────────────────────────────────────────────────────── */
+.section-title {
+  @apply text-lg font-bold text-white flex items-center gap-2.5 mb-4;
 }
-.conf-bar-fill {
-  @apply h-full rounded-full transition-all duration-700;
+.section-title::before {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 1.1em;
+  background: linear-gradient(to bottom, #22c55e, #a3e635);
+  border-radius: 4px;
+  flex-shrink: 0;
 }
 
-/* ── Leaflet override ────────────────────────────────────────── */
-.leaflet-container {
-  background: #080d1a !important;
-  font-family: 'Inter', sans-serif !important;
+/* ───────────────────────────────────────────────────────────────────── */
+/*  INFO CARD — contextual card with image header                        */
+/* ───────────────────────────────────────────────────────────────────── */
+.info-card {
+  @apply glass rounded-2xl overflow-hidden transition-all duration-300;
 }
+.info-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(74,222,128,0.28);
+  box-shadow: 0 12px 40px rgba(34,197,94,0.12);
+}
+.info-card-img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  object-position: center;
+  filter: brightness(0.75) saturate(1.2);
+}
+.info-card-body { @apply p-4; }
+
+/* ───────────────────────────────────────────────────────────────────── */
+/*  AGRI BANNER — decorative leaf-pattern divider/callout               */
+/* ───────────────────────────────────────────────────────────────────── */
+.agri-banner {
+  background: linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(163,230,53,0.05) 100%);
+  border: 1px solid rgba(34,197,94,0.18);
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  position: relative;
+  overflow: hidden;
+}
+.agri-banner::after {
+  content: '🌿';
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 2.5rem;
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+/* ───────────────────────────────────────────────────────────────────── */
+/*  STEP PILL — numbered step indicator                                  */
+/* ───────────────────────────────────────────────────────────────────── */
+.step-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #16a34a, #4ade80);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  box-shadow: 0 0 12px rgba(34,197,94,0.35);
+}
+
+/* ───────────────────────────────────────────────────────────────────── */
+/*  CROP BADGE — small crop-type label pill                              */
+/* ───────────────────────────────────────────────────────────────────── */
+.crop-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  background: rgba(34,197,94,0.10);
+  border: 1px solid rgba(34,197,94,0.22);
+  color: #4ade80;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.crop-badge:hover {
+  background: rgba(34,197,94,0.18);
+  border-color: rgba(74,222,128,0.4);
+  transform: translateY(-1px);
+}
+
+/* ───────────────────────────────────────────────────────────────────── */
+/*  STAT STRIP — horizontal quick-stat bar                               */
+/* ───────────────────────────────────────────────────────────────────── */
+.stat-strip {
+  display: grid;
+  gap: 0;
+  border: 1px solid rgba(34,197,94,0.16);
+  border-radius: 1rem;
+  overflow: hidden;
+  background: rgba(10,31,19,0.6);
+  backdrop-filter: blur(10px);
+}
+.stat-strip-item {
+  padding: 1rem 1.25rem;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  text-align: center;
+}
+.stat-strip-item:last-child { border-right: none; }
+.stat-strip-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #4ade80;
+  line-height: 1.2;
+}
+.stat-strip-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+
+/* ── Leaflet override ───────────────────────────────────────────────── */
+.leaflet-container { background: #080d1a !important; font-family: 'Inter', sans-serif !important; }
 .leaflet-popup-content-wrapper {
   background: #111c35 !important;
   border: 1px solid rgba(255,255,255,0.12) !important;
@@ -202,27 +339,64 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   color: #e2e8f0 !important;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
 }
-.leaflet-popup-tip { background: #111c35 !important; }
+.leaflet-popup-tip          { background: #111c35 !important; }
 .leaflet-popup-close-button { color: #94a3b8 !important; }
-.leaflet-tile { filter: brightness(0.5) saturate(0.6) hue-rotate(200deg); }
+.leaflet-tile               { filter: brightness(0.5) saturate(0.6) hue-rotate(200deg); }
 
-/* ── Animation utilities ─────────────────────────────────────── */
-.animate-fade-in { animation: fadeIn 0.3s ease-out; }
+/* ── Animation utilities ────────────────────────────────────────────── */
+.animate-fade-in  { animation: fadeIn 0.3s ease-out; }
 .animate-slide-up { animation: slideUp 0.35s ease-out; }
+.animate-shimmer  { animation: shimmer 2s infinite; }
+.animate-float    { animation: float 4s ease-in-out infinite; }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+@keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
+@keyframes slideUp  { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+@keyframes shimmer  {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
 }
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+.shimmer-text {
+  background: linear-gradient(90deg, #4ade80 25%, #a3e635 50%, #fbbf24 75%, #4ade80 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
 }
 
 .pulse-high {
   animation: pulseRed 1.8s ease-in-out infinite;
 }
 @keyframes pulseRed {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+  0%, 100% { box-shadow: 0 0 0 0   rgba(239,68,68,0.4); }
   50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+}
+
+/* ── Divider with label ─────────────────────────────────────────────── */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+.section-divider::before,
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(34,197,94,0.2), transparent);
+}
+.section-divider-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #4ade80;
+  opacity: 0.7;
+  white-space: nowrap;
 }

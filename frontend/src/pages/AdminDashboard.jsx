@@ -157,33 +157,46 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ── Page Header ── */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 glass-card p-6 rounded-2xl border border-amber-500/25 shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-600 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-600/30 border border-amber-400/40">
-              <Sliders className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-black tracking-tight text-white">System Administration Console</h1>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">
-                  {user?.badge || 'SYS-ADMIN'}
-                </span>
+        {/* ── Agricultural Command Center Hero Banner ── */}
+        <div className="relative rounded-2xl overflow-hidden border border-amber-500/25 shadow-2xl">
+          <img
+            src="/images/hero_admin.jpg"
+            alt="National crop disease command center — Sri Lanka surveillance system"
+            className="w-full object-cover"
+            style={{ height: '180px', objectPosition: 'center 30%', opacity: 0.55, filter: 'saturate(1.1) brightness(0.9)' }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#05130b]/98 via-[#05130b]/75 to-transparent" />
+          <div className="absolute inset-0 flex items-center px-6">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-600 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-600/30 border border-amber-400/40 flex-shrink-0">
+                <Sliders className="w-8 h-8 text-white" />
               </div>
-              <p className="text-xs text-slate-400 mt-1">
-                National Crop Biosecurity Command — AI Quality Oversight & Authority Operations
-              </p>
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 bg-amber-950/70 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                    ⚙️ System Administration
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">
+                    {user?.badge || 'SYS-ADMIN'}
+                  </span>
+                </div>
+                <h1 className="text-2xl font-black tracking-tight text-white">System Administration Console</h1>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  National Crop Biosecurity Command · AI Quality Oversight & Authority Operations
+                </p>
+              </div>
+            </div>
+            <div className="ml-auto">
+              <button
+                onClick={fetchDashboardData}
+                disabled={loading}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-amber-200 text-xs font-bold transition-all shadow-md active:scale-95"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                <span>Refresh Telemetry</span>
+              </button>
             </div>
           </div>
-
-          <button
-            onClick={fetchDashboardData}
-            disabled={loading}
-            className="self-start md:self-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-amber-200 text-xs font-bold transition-all shadow-md active:scale-95"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh Telemetry</span>
-          </button>
         </div>
 
         {/* ── Metric Cards ── */}

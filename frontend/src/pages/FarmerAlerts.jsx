@@ -151,29 +151,52 @@ const FarmerAlerts = () => {
   const unreadCount = alerts.filter((a) => !a.read).length;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#080d1a] py-8 px-4 sm:px-6 animate-fade-in">
-      {/* Subheader */}
-      <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between pb-4 border-b border-white/5">
-        <div>
-          <button
-            onClick={() => navigate('/farmer')}
-            className="text-slate-400 hover:text-emerald-400 transition-colors text-xs font-semibold mb-2 block"
-          >
-            ← Back to Overview
-          </button>
-          <h1 className="text-2xl font-black text-white flex items-center gap-2">
-            <span>🔔</span> Farm Disease & Outbreak Alerts
-          </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Real-time advisory notifications and regional containment alerts
-          </p>
+    <div className="min-h-[calc(100vh-4rem)] bg-[#05130b] py-8 px-4 sm:px-6 animate-fade-in">
+
+      {/* ── Agricultural Outbreak Alerts Hero Banner ── */}
+      <div className="max-w-2xl mx-auto mb-6">
+        <div className="relative rounded-2xl overflow-hidden border border-red-500/25 shadow-2xl mb-5">
+          <img
+            src="/images/alerts_banner.jpg"
+            alt="Sri Lanka disease outbreak early warning map"
+            className="w-full object-cover"
+            style={{ height: '150px', objectPosition: 'center 40%', opacity: 0.5, filter: 'saturate(1.2)' }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#05130b]/98 via-[#05130b]/70 to-transparent" />
+          <div className="absolute inset-0 flex items-center px-5">
+            <div>
+              <button
+                onClick={() => navigate('/farmer')}
+                className="text-slate-400 hover:text-emerald-400 transition-colors text-xs font-semibold mb-2 block"
+              >
+                ← Back to Overview
+              </button>
+              <h1 className="text-2xl font-black text-white flex items-center gap-2">
+                <span>🔔</span> Farm Disease & Outbreak Alerts
+              </h1>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Real-time advisory notifications and regional disease containment alerts
+              </p>
+            </div>
+            {unreadCount > 0 && (
+              <span className="ml-auto bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold px-3 py-1.5 rounded-full flex-shrink-0 animate-pulse">
+                {unreadCount} Unread
+              </span>
+            )}
+          </div>
         </div>
-        {unreadCount > 0 && (
-          <span className="bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold px-3 py-1 rounded-full">
-            {unreadCount} Unread
-          </span>
-        )}
+
+        {/* Alert type legend */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {Object.entries(TYPE_CONFIG).map(([type, cfg]) => (
+            <span key={type} className={`flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full border ${cfg.bg} ${cfg.border} text-white/80`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+              {cfg.label}
+            </span>
+          ))}
+        </div>
       </div>
+
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-3 pb-12">
         {/* Loading */}

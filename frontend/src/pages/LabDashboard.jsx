@@ -169,33 +169,46 @@ export default function LabDashboard() {
           </div>
         )}
 
-        {/* ── Page Header ── */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 glass-card p-6 rounded-2xl border border-purple-500/25">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-700 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-600/30 border border-purple-400/40">
-              <Microscope className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-black tracking-tight text-white">Pathology Research Laboratory</h1>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40 font-mono">
-                  {user?.badge || 'LAB-SL-01'}
-                </span>
+        {/* ── Agricultural Hero Banner ── */}
+        <div className="relative rounded-2xl overflow-hidden border border-purple-500/25 shadow-2xl">
+          <img
+            src="/images/hero_lab.jpg"
+            alt="Agricultural pathology laboratory — microscope and plant specimens"
+            className="w-full object-cover"
+            style={{ height: '180px', objectPosition: 'center 35%', opacity: 0.6, filter: 'saturate(1.1)' }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#05130b]/98 via-[#05130b]/75 to-transparent" />
+          <div className="absolute inset-0 flex items-center px-6">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-700 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-600/30 border border-purple-400/40 flex-shrink-0">
+                <Microscope className="w-8 h-8 text-white" />
               </div>
-              <p className="text-xs text-slate-400 mt-1">
-                National Agricultural Pathogen Verification & Biological Sample Sequencing Console
-              </p>
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-purple-400 bg-purple-950/70 px-2.5 py-0.5 rounded-full border border-purple-500/30">
+                    🔬 National Pathogen Lab
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/40 font-mono">
+                    {user?.badge || 'LAB-SL-01'}
+                  </span>
+                </div>
+                <h1 className="text-2xl font-black tracking-tight text-white">Pathology Research Laboratory</h1>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Agricultural Pathogen Verification · Biological Sample Sequencing Console
+                </p>
+              </div>
+            </div>
+            <div className="ml-auto">
+              <button
+                onClick={fetchLabRequests}
+                disabled={loading}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-200 text-xs font-bold transition-all shadow-md active:scale-95"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                <span>Refresh Samples</span>
+              </button>
             </div>
           </div>
-
-          <button
-            onClick={fetchLabRequests}
-            disabled={loading}
-            className="self-start md:self-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-200 text-xs font-bold transition-all shadow-md active:scale-95"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh Samples</span>
-          </button>
         </div>
 
         {/* ── Metric Cards ── */}

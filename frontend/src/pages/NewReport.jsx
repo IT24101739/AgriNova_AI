@@ -130,30 +130,43 @@ export default function NewReport() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
       
-      {/* ── Breadcrumbs & Back ── */}
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
-        <button
-          onClick={() => navigate('/farmer')}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-emerald-400 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Overview</span>
-        </button>
-        <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-          Feature Slice 1 & 2
-        </span>
+      {/* ── AI Leaf Scan Hero Banner ── */}
+      <div className="relative rounded-2xl overflow-hidden border border-emerald-500/20 shadow-2xl mb-6">
+        <img
+          src="/images/crop_scan.jpg"
+          alt="AI leaf scanning — upload your crop photo"
+          className="w-full object-cover"
+          style={{ height: '130px', objectPosition: 'center 20%', opacity: 0.4, filter: 'saturate(1.3)' }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#05130b]/98 via-[#05130b]/70 to-transparent" />
+        <div className="absolute inset-0 flex items-center px-5 justify-between">
+          <div>
+            <button
+              onClick={() => navigate('/farmer')}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-emerald-400 transition-colors mb-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Overview</span>
+            </button>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
+              <Camera className="w-7 h-7 text-emerald-400" />
+              New Disease Diagnostic Scan
+            </h1>
+            <p className="text-xs text-slate-300 mt-1">
+              Upload infected crop foliage photo → Instant AI pathogen diagnosis + treatment advisory
+            </p>
+          </div>
+          <div className="flex-shrink-0 hidden sm:flex flex-col gap-1.5 items-end">
+            {[['1', 'Photo Upload'], ['2', 'AI Analysis'], ['3', 'Get Treatment']].map(([n, label]) => (
+              <div key={n} className="flex items-center gap-2 text-[10px] text-slate-300">
+                <div className="step-pill" style={{width:'1.4rem',height:'1.4rem',fontSize:'0.65rem'}}>{n}</div>
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* ── Title Card ── */}
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
-          <Camera className="w-7 h-7 text-emerald-400" />
-          New Disease Diagnostic Scan
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-400 mt-1">
-          Upload a high-clarity photo of infected crop foliage to get an instant AI diagnosis and advisory.
-        </p>
-      </div>
 
       {/* ── Form Card ── */}
       <div className="glass-elevated rounded-2xl p-6 sm:p-8 border border-white/10 shadow-2xl">

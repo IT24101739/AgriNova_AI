@@ -149,37 +149,51 @@ const DiagnosisResult = () => {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#080d1a] py-6 px-4 sm:px-6 animate-fade-in">
-      {/* Sub navigation bar */}
-      <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between pb-4 border-b border-white/5">
-        <div>
-          <button
-            onClick={() => navigate('/farmer')}
-            className="flex items-center gap-1.5 text-slate-400 hover:text-emerald-400 transition-colors text-xs font-semibold mb-1"
-          >
-            <span>←</span> Back to Overview
-          </button>
-          <h1 className="text-xl sm:text-2xl font-black text-white">Crop Diagnosis & Advisory</h1>
-        </div>
+    <div className="min-h-[calc(100vh-4rem)] bg-[#05130b] py-6 px-4 sm:px-6 animate-fade-in">
 
-        {/* Language selector pills */}
-        <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
-          {LANGUAGES.map((l) => (
-            <button
-              key={l.code}
-              onClick={() => handleLanguageChange(l.code)}
-              disabled={langLoading}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                language === l.code
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-bold"
-                  : "text-slate-400 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              {l.label}
-            </button>
-          ))}
+      {/* ── AI Crop Scan Hero Banner ── */}
+      <div className="max-w-2xl mx-auto mb-6">
+        <div className="relative rounded-2xl overflow-hidden border border-emerald-500/20 shadow-2xl mb-4">
+          <img
+            src="/images/crop_scan.jpg"
+            alt="AI crop pathology scanning — leaf disease detection"
+            className="w-full object-cover"
+            style={{ height: '130px', objectPosition: 'center 25%', opacity: 0.45, filter: 'saturate(1.2)' }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#05130b]/98 via-[#05130b]/70 to-transparent" />
+          <div className="absolute inset-0 flex items-center px-5 justify-between">
+            <div>
+              <button
+                onClick={() => navigate('/farmer')}
+                className="flex items-center gap-1.5 text-slate-400 hover:text-emerald-400 transition-colors text-xs font-semibold mb-1"
+              >
+                <span>←</span> Back to Overview
+              </button>
+              <h1 className="text-xl sm:text-2xl font-black text-white">Crop Diagnosis & Advisory</h1>
+              <p className="text-xs text-slate-300 mt-0.5">AI-powered pathogen analysis · Field evidence review</p>
+            </div>
+
+            {/* Language selector pills */}
+            <div className="flex items-center gap-1 bg-black/50 backdrop-blur-sm p-1 rounded-xl border border-white/10 flex-shrink-0">
+              {LANGUAGES.map((l) => (
+                <button
+                  key={l.code}
+                  onClick={() => handleLanguageChange(l.code)}
+                  disabled={langLoading}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                    language === l.code
+                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-bold"
+                      : "text-slate-400 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
+
 
       {/* Main content */}
       <main className="max-w-lg mx-auto px-4 py-6 space-y-4 pb-12">

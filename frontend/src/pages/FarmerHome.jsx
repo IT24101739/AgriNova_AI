@@ -150,12 +150,13 @@ export default function FarmerHome() {
         {/* Real Agricultural Background Image with soft gradient blending */}
         <div className="absolute inset-0 z-0">
           <img
-            src="/images/agri_hero.jpg"
-            alt="Sri Lankan terraced fields"
-            className="w-full h-full object-cover object-center opacity-25 filter blur-[1px] scale-105"
+            src="/images/hero_farmer.jpg"
+            alt="Sri Lankan terraced rice paddies at golden hour"
+            className="w-full h-full object-cover object-center opacity-28 filter saturate-110 scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#05130b]/90 via-[#05130b]/85 to-[#05130b]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#05130b]/85 via-[#05130b]/80 to-[#05130b]" />
         </div>
+
 
         <div className="max-w-7xl mx-auto relative z-10">
           
@@ -651,6 +652,84 @@ export default function FarmerHome() {
               ))}
             </div>
           )}
+        </section>
+
+        {/* ── How It Works — 3-Step Visual Section ── */}
+        <section className="pb-10">
+          <div className="mb-6 text-center">
+            <h2 className="text-xl font-bold text-white flex items-center justify-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-400" />
+              How AgriNova AI Works
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">Three simple steps to protect your harvest</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* Step 1 */}
+            <div className="glass-elevated rounded-2xl p-5 border border-emerald-500/20 relative overflow-hidden">
+              <div className="absolute top-3 right-3 text-5xl opacity-10">📸</div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="step-pill">1</div>
+                <h3 className="font-bold text-white text-sm">Photograph the Leaf</h3>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Take a clear, close-up photo of any infected-looking leaf from your crop — tomato, potato, rice, chili, or pepper. Good lighting gives the best results.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-1">
+                {['🍅 Tomato','🥔 Potato','🌾 Rice','🌶️ Chili'].map(c => (
+                  <span key={c} className="crop-badge text-[10px] py-0.5">{c}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="glass-elevated rounded-2xl p-5 border border-lime-500/20 relative overflow-hidden">
+              <div className="absolute top-3 right-3 text-5xl opacity-10">🤖</div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="step-pill">2</div>
+                <h3 className="font-bold text-white text-sm">AI Analyses the Disease</h3>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Our EfficientNet-B0 model detects Early Blight, Late Blight, Leaf Curl, Blast, and more with <strong className="text-lime-300">95%+ accuracy</strong>. OpenCV calculates exact lesion severity percentages.
+              </p>
+              <div className="mt-3 p-2 rounded-lg bg-lime-950/40 border border-lime-500/20 text-[10px] font-mono text-lime-300">
+                EfficientNet-B0 + HSV Lesion Analysis
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="glass-elevated rounded-2xl p-5 border border-amber-500/20 relative overflow-hidden">
+              <div className="absolute top-3 right-3 text-5xl opacity-10">💊</div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="step-pill">3</div>
+                <h3 className="font-bold text-white text-sm">Receive Treatment Plan</h3>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Get step-by-step organic and chemical treatment instructions in your preferred language — <strong className="text-amber-300">Sinhala, Tamil, or English</strong>. Spray safety windows included.
+              </p>
+              <div className="mt-3 flex gap-1.5">
+                <span className="crop-badge text-[10px] py-0.5">🇱🇰 සිංහල</span>
+                <span className="crop-badge text-[10px] py-0.5">தமிழ்</span>
+                <span className="crop-badge text-[10px] py-0.5">English</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom CTA */}
+          <div className="mt-6 agri-banner flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <p className="font-bold text-white text-sm">Ready to protect your crop?</p>
+              <p className="text-xs text-slate-300 mt-0.5">Start a free AI leaf scan in under 60 seconds.</p>
+            </div>
+            <button
+              onClick={() => navigate('/reports/new')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 shadow-lg shadow-emerald-500/25 active:scale-95 transition-all"
+            >
+              <Camera className="w-4 h-4" />
+              Start New Leaf Scan
+              <ArrowRight className="w-4 h-4 opacity-70" />
+            </button>
+          </div>
         </section>
 
       </main>

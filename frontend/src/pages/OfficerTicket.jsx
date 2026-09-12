@@ -139,40 +139,52 @@ export default function OfficerTicket() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Back + header */}
-      <div className="flex items-start gap-4">
-        <button onClick={() => navigate(-1)} className="btn-secondary py-2 px-3 mt-0.5">
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <PriorityBadge priority={ticket.priority} pulse />
-            <span className="text-xs text-slate-400 font-mono">#{ticket.id?.slice(0, 8)}</span>
-            <span className="text-xs badge bg-slate-700/60 text-slate-300">
-              {ticket.status?.replace(/_/g, ' ')}
-            </span>
-          </div>
-          <h1 className="text-xl font-bold text-white truncate">
-            {report.disease || 'Undiagnosed'} — {report.crop || 'Unknown'}
-          </h1>
-          <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 mt-1">
-            {farm.district && (
-              <span className="flex items-center gap-1">
-                <MapPin className="w-3 h-3" /> {farm.district}
+
+      {/* ── Field Visit Hero Banner ── */}
+      <div className="relative rounded-2xl overflow-hidden border border-emerald-500/20 shadow-xl">
+        <img
+          src="/images/field_visit.jpg"
+          alt="Agriculture officer conducting field inspection"
+          className="w-full object-cover"
+          style={{ height: '150px', objectPosition: 'center 30%', opacity: 0.5, filter: 'saturate(1.1)' }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#05130b]/98 via-[#05130b]/75 to-transparent" />
+        <div className="absolute inset-0 flex items-center px-4 gap-3">
+          <button onClick={() => navigate(-1)} className="btn-secondary py-2 px-3 flex-shrink-0">
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 bg-emerald-950/70 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                🌾 Officer Field Case
               </span>
-            )}
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              {ticket.created_at ? new Date(ticket.created_at).toLocaleString('en-GB', {
-                day: '2-digit', month: 'short', year: 'numeric',
-              }) : '—'}
-            </span>
-            <span className="text-slate-500">Reason: {ticket.reason?.replace(/_/g, ' ')}</span>
+              <PriorityBadge priority={ticket.priority} pulse />
+              <span className="text-xs text-slate-400 font-mono">#{ticket.id?.slice(0, 8)}</span>
+              <span className="text-xs badge bg-slate-700/60 text-slate-300">
+                {ticket.status?.replace(/_/g, ' ')}
+              </span>
+            </div>
+            <h1 className="text-xl font-bold text-white truncate">
+              {report.disease || 'Undiagnosed'} — {report.crop || 'Unknown'}
+            </h1>
+            <div className="flex flex-wrap items-center gap-4 text-xs text-slate-300 mt-1">
+              {farm.district && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-emerald-400" /> {farm.district}
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-slate-400" />
+                {ticket.created_at ? new Date(ticket.created_at).toLocaleString('en-GB', {
+                  day: '2-digit', month: 'short', year: 'numeric',
+                }) : '—'}
+              </span>
+            </div>
           </div>
+          <button onClick={fetch} className="btn-secondary py-2 px-3 flex-shrink-0">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
         </div>
-        <button onClick={fetch} className="btn-secondary py-2 px-3">
-          <RefreshCw className="w-3.5 h-3.5" />
-        </button>
       </div>
 
       {/* AI Summary */}

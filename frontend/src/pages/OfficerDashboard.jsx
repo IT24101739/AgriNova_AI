@@ -34,19 +34,37 @@ export default function OfficerDashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Officer Dashboard</h1>
-          <p className="text-sm text-slate-400 mt-0.5">
-            Agriculture Disease Case Management — Western Province
-          </p>
+
+      {/* ── Agricultural Hero Banner ── */}
+      <div className="relative rounded-2xl overflow-hidden border border-emerald-500/20">
+        <img
+          src="/images/hero_officer.jpg"
+          alt="Aerial view of Sri Lankan farmland — disease surveillance region"
+          className="w-full object-cover"
+          style={{ height: '160px', objectPosition: 'center 40%', opacity: 0.55, filter: 'saturate(1.2)' }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#05130b]/95 via-[#05130b]/70 to-transparent" />
+        <div className="absolute inset-0 flex items-center px-6">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 bg-emerald-950/70 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                🛡️ Agriculture Officer Command
+              </span>
+            </div>
+            <h1 className="text-2xl font-bold text-white">Officer Dashboard</h1>
+            <p className="text-sm text-slate-300 mt-0.5">
+              Crop Disease Case Management — Field Surveillance & Outbreak Monitoring
+            </p>
+          </div>
+          <div className="ml-auto">
+            <button onClick={refetch} className="btn-secondary text-xs py-2">
+              <RefreshCw className="w-3.5 h-3.5" />
+              Refresh
+            </button>
+          </div>
         </div>
-        <button onClick={refetch} className="btn-secondary text-xs py-2">
-          <RefreshCw className="w-3.5 h-3.5" />
-          Refresh
-        </button>
       </div>
+
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
