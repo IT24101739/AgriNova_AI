@@ -128,7 +128,7 @@ async def submit_report(
         logger.error(f"Unexpected error in submit_report: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred. Please try again.",
+            detail=f"Analysis pipeline error: {str(e)}",
         )
 
     return {

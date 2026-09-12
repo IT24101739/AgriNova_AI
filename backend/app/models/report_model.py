@@ -133,6 +133,7 @@ class AnalysisResult(Base):
     weather_risk = Column(String(20), nullable=True)
     outbreak_risk = Column(String(20), nullable=True)
     final_confidence = Column(Float, nullable=True)
+    spread_risk = Column(String(20), nullable=True)
     report = relationship("Report", back_populates="analysis_result")
 
 

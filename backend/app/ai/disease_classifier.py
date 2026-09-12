@@ -260,11 +260,10 @@ class DiseaseClassifier:
         )
 
     def _predict_with_gemini_vision(self, image_bytes: bytes, expected_crop: str, api_key: str) -> Optional[dict]:
-        """Perform zero-shot multimodal vision diagnosis using Google Gemini 2.5."""
+        """Perform zero-shot multimodal vision diagnosis using Google Gemini."""
         try:
             import google.generativeai as genai
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel("gemini-2.5-flash")
 
             image = Image.open(io.BytesIO(image_bytes))
             if image.mode != "RGB":
@@ -304,7 +303,26 @@ class DiseaseClassifier:
                 f"}}"
             )
 
-            res = model.generate_content([prompt, image])
+            model_candidates = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-3.5-flash-lite"]
+            res = None
+            last_err = None
+
+            for candidate in model_candidates:
+                try:
+                    model = genai.GenerativeModel(candidate)
+                    res = model.generate_content([prompt, image])
+                    if res and res.text:
+                        logger.info("Gemini Vision diagnosis succeeded using model: %s", candidate)
+                        break
+                except Exception as m_err:
+                    last_err = m_err
+                    logger.debug("Gemini model %s unavailable: %s", candidate, m_err)
+                    continue
+
+            if not res or not res.text:
+                logger.warning("All Gemini Vision models failed or quota exceeded (%s). Falling back to local engine.", last_err)
+                return None
+
             text = res.text.strip()
             if text.startswith("```json"):
                 text = text[7:]
@@ -352,7 +370,7 @@ class DiseaseClassifier:
             return None
 
     def _verify_foliage_opencv(self, image_bytes: bytes) -> tuple[bool, float, str]:
-        """Fast computer vision heuristic to verify if the image contains green plant foliage."""
+        """Fast computer vision heuristic to verify if the image contains green or diseased plant foliage."""
         try:
             nparr = np.frombuffer(image_bytes, np.uint8)
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -360,19 +378,28 @@ class DiseaseClassifier:
                 return False, 0.0, "Invalid or corrupted image format."
 
             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-            # Green leaf HSV color range
-            lower_green = np.array([25, 35, 35])
-            upper_green = np.array([90, 255, 255])
-            mask = cv2.inRange(hsv, lower_green, upper_green)
-            green_ratio = float(cv2.countNonZero(mask) / (img.shape[0] * img.shape[1]))
+            # 1. Green leaf HSV color range
+            lower_green = np.array([25, 25, 25])
+            upper_green = np.array([95, 255, 255])
+            mask_green = cv2.inRange(hsv, lower_green, upper_green)
+            green_ratio = float(cv2.countNonZero(mask_green) / (img.shape[0] * img.shape[1]))
 
-            if green_ratio < 0.05:
+            # 2. Chlorotic / yellowish diseased foliage range
+            lower_yellow = np.array([15, 25, 25])
+            upper_yellow = np.array([25, 255, 255])
+            mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
+            yellow_ratio = float(cv2.countNonZero(mask_yellow) / (img.shape[0] * img.shape[1]))
+
+            total_foliage_ratio = green_ratio + yellow_ratio
+
+            # If almost no plant tissue or vegetation hues exist (< 3%)
+            if total_foliage_ratio < 0.03:
                 return (
                     False,
-                    green_ratio,
+                    total_foliage_ratio,
                     "No crop leaf or foliage detected in the photo. Please upload a clear photo of plant foliage.",
                 )
-            return True, green_ratio, ""
+            return True, total_foliage_ratio, ""
         except Exception as err:
             logger.warning("OpenCV foliage check error: %s", err)
             return True, 0.5, ""
