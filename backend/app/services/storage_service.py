@@ -52,8 +52,11 @@ def upload_image(file_bytes: bytes, original_filename: str) -> str:
         return public_url
 
     except Exception as e:
-        logger.error(f"Storage upload failed: {e}", exc_info=True)
-        raise RuntimeError(f"Image upload failed: {e}") from e
+        logger.warning(f"Supabase storage upload failed ({e}). Generating inline image data URL.", exc_info=True)
+        import base64
+        b64 = base64.b64encode(file_bytes).decode("utf-8")
+        mime = _mime_type(ext)
+        return f"data:{mime};base64,{b64}"
 
 
 def _get_extension(filename: str) -> str:

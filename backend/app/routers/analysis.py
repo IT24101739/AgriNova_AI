@@ -38,9 +38,10 @@ def _fmt_weather(w: dict) -> str:
 
 
 async def _load_report_and_farm(report_id: str) -> tuple[dict, dict]:
-    """Load report + its farm from DB.  Raises HTTPException on missing data."""
-    sb = get_supabase()
+    """Load report + its farm from DB. Supports Supabase and local ORM fallback."""
+    # 1. Try Supabase REST
     try:
+        sb = get_supabase()
         res = (
             sb.table("reports")
             .select("*, farms(id, latitude, longitude, crop, district, farmer_id)")
@@ -48,25 +49,60 @@ async def _load_report_and_farm(report_id: str) -> tuple[dict, dict]:
             .single()
             .execute()
         )
+        report = res.data
+        if report and report.get("farms"):
+            return report, report["farms"]
     except Exception as exc:
-        logger.error("DB error loading report %s: %s", report_id, exc)
+        logger.warning("Supabase lookup for report %s not available (%s). Using local ORM fallback.", report_id, exc)
+
+    # 2. Fallback to SQLAlchemy ORM (SQLite / PostgreSQL)
+    from app.models.database import SessionLocal
+    from app.models.report_model import Report, Farm
+    import uuid
+
+    db = SessionLocal()
+    try:
+        rep_uuid = uuid.UUID(str(report_id))
+        rep = db.query(Report).filter(Report.id == rep_uuid).first()
+        if not rep:
+            raise HTTPException(status_code=404, detail=f"Report '{report_id}' not found.")
+        farm = rep.farm
+        report_dict = {
+            "id": str(rep.id),
+            "farm_id": str(rep.farm_id),
+            "crop": rep.crop,
+            "description": rep.description,
+            "image_url": rep.image_url,
+            "preferred_language": rep.preferred_language or "en",
+            "disease": rep.disease,
+            "confidence": rep.confidence,
+            "severity": rep.severity,
+            "spread_risk": rep.spread_risk,
+            "status": rep.status,
+            "created_at": rep.created_at.isoformat() if rep.created_at else None,
+        }
+        farm_dict = {
+            "id": str(farm.id) if farm else str(rep.farm_id),
+            "latitude": farm.latitude if farm else 6.9271,
+            "longitude": farm.longitude if farm else 79.8612,
+            "crop": (farm.crop if farm else None) or rep.crop,
+            "district": farm.district if farm else "Western",
+            "farmer_id": str(farm.farmer_id) if farm else "00000000-0000-0000-0000-000000000001",
+        }
+        return report_dict, farm_dict
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Error loading report from ORM: %s", exc)
         raise HTTPException(status_code=503, detail="Database error while loading report.")
-
-    report = res.data
-    if not report:
-        raise HTTPException(status_code=404, detail=f"Report '{report_id}' not found.")
-
-    farm = report.get("farms")
-    if not farm:
-        raise HTTPException(status_code=422, detail="Report is not linked to a farm with coordinates.")
-
-    return report, farm
+    finally:
+        db.close()
 
 
 async def _existing_analysis(report_id: str) -> Optional[dict]:
     """Return the saved analysis_results row if it exists, else None."""
-    sb = get_supabase()
     try:
+        sb = get_supabase()
         res = (
             sb.table("analysis_results")
             .select("*")
@@ -74,15 +110,41 @@ async def _existing_analysis(report_id: str) -> Optional[dict]:
             .execute()
         )
         rows = res.data or []
-        return rows[0] if rows else None
+        if rows:
+            return rows[0]
     except Exception as exc:
-        logger.warning("Could not check existing analysis: %s", exc)
+        logger.debug("Supabase analysis check not available: %s", exc)
+
+    # Fallback to SQLAlchemy ORM
+    from app.models.database import SessionLocal
+    from app.models.report_model import AnalysisResult
+    import uuid
+
+    db = SessionLocal()
+    try:
+        rep_uuid = uuid.UUID(str(report_id))
+        ar = db.query(AnalysisResult).filter(AnalysisResult.report_id == rep_uuid).first()
+        if ar and ar.disease:
+            return {
+                "report_id": str(ar.report_id),
+                "disease": ar.disease,
+                "disease_confidence": ar.disease_confidence,
+                "severity": ar.severity,
+                "weather_risk": ar.weather_risk,
+                "outbreak_risk": ar.outbreak_risk,
+                "final_confidence": ar.final_confidence,
+                "spread_risk": ar.spread_risk,
+            }
         return None
+    except Exception as exc:
+        logger.debug("ORM analysis check: %s", exc)
+        return None
+    finally:
+        db.close()
 
 
 async def _save_analysis(report_id: str, weather: dict, outbreak: dict, aggregation: dict) -> None:
     """Persist the analysis_results row (idempotent upsert)."""
-    sb = get_supabase()
     payload = {
         "report_id": report_id,
         "disease": aggregation["final_disease"],
@@ -94,9 +156,52 @@ async def _save_analysis(report_id: str, weather: dict, outbreak: dict, aggregat
         "spread_risk": aggregation["spread_risk"],
     }
     try:
+        sb = get_supabase()
         sb.table("analysis_results").upsert(payload, on_conflict="report_id").execute()
     except Exception as exc:
-        logger.error("Failed to save analysis_results: %s", exc)
+        logger.debug("Supabase analysis_results upsert skipped/failed: %s", exc)
+
+    # Also save to ORM
+    from app.models.database import SessionLocal
+    from app.models.report_model import AnalysisResult, Report
+    import uuid
+
+    db = SessionLocal()
+    try:
+        rep_uuid = uuid.UUID(str(report_id))
+        ar = db.query(AnalysisResult).filter(AnalysisResult.report_id == rep_uuid).first()
+        if not ar:
+            ar = AnalysisResult(
+                id=uuid.uuid4(),
+                report_id=rep_uuid,
+                disease=aggregation["final_disease"],
+                disease_confidence=aggregation["final_confidence"],
+                weather_risk=weather.get("weather_risk"),
+                outbreak_risk=outbreak.get("outbreak_risk"),
+                final_confidence=aggregation["final_confidence"],
+                spread_risk=aggregation["spread_risk"],
+            )
+            db.add(ar)
+        else:
+            ar.disease = aggregation["final_disease"]
+            ar.disease_confidence = aggregation["final_confidence"]
+            ar.weather_risk = weather.get("weather_risk")
+            ar.outbreak_risk = outbreak.get("outbreak_risk")
+            ar.final_confidence = aggregation["final_confidence"]
+            ar.spread_risk = aggregation["spread_risk"]
+
+        rep = db.query(Report).filter(Report.id == rep_uuid).first()
+        if rep:
+            rep.disease = aggregation["final_disease"]
+            rep.confidence = aggregation["final_confidence"]
+            rep.spread_risk = aggregation["spread_risk"]
+            rep.status = "DIAGNOSED"
+
+        db.commit()
+    except Exception as exc:
+        logger.error("Failed to save analysis_results in ORM: %s", exc)
+    finally:
+        db.close()
 
 
 async def _create_officer_ticket(report_id: str, reasons: list[str], outbreak_risk: str) -> None:

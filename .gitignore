@@ -19,6 +19,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+*.db
+*.sqlite*
+agrishield.db
 
 # Node / Frontend
 frontend/node_modules/

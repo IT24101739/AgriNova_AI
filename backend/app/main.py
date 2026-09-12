@@ -35,9 +35,14 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load heavy resources (AI models) once on startup."""
+    """Load heavy resources (AI models) and initialize database on startup."""
     get_settings.cache_clear()
     logger.info("🌱 AgriShield backend starting up...")
+    try:
+        from app.models.database import init_db
+        init_db()
+    except Exception as e:
+        logger.error(f"Database init failed: {e}")
     try:
         classifier = get_classifier()
         classifier.load()

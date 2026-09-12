@@ -38,8 +38,9 @@ async def weather_risk(
       • lat + lon  – coordinates supplied directly (disease optional)
     """
     if report_id:
-        sb = get_supabase()
+        data = None
         try:
+            sb = get_supabase()
             res = (
                 sb.table("reports")
                 .select("disease, farms(latitude, longitude)")
@@ -47,10 +48,30 @@ async def weather_risk(
                 .single()
                 .execute()
             )
+            data = res.data
         except Exception as exc:
-            raise HTTPException(status_code=503, detail=f"DB error: {exc}")
+            logger.warning("Supabase weather lookup not available (%s). Trying local ORM.", exc)
 
-        data = res.data
+        if not data:
+            from app.models.database import SessionLocal
+            from app.models.report_model import Report
+            import uuid
+            db = SessionLocal()
+            try:
+                rep = db.query(Report).filter(Report.id == uuid.UUID(str(report_id))).first()
+                if rep:
+                    data = {
+                        "disease": rep.disease or "",
+                        "farms": {
+                            "latitude": rep.farm.latitude if rep.farm else 6.9271,
+                            "longitude": rep.farm.longitude if rep.farm else 79.8612,
+                        },
+                    }
+            except Exception as e:
+                logger.error("ORM lookup in weather failed: %s", e)
+            finally:
+                db.close()
+
         if not data:
             raise HTTPException(status_code=404, detail="Report not found.")
 
@@ -60,7 +81,8 @@ async def weather_risk(
         disease_name = data.get("disease") or ""
 
         if latitude is None or longitude is None:
-            raise HTTPException(status_code=422, detail="Report farm has no coordinates.")
+            latitude = 6.9271
+            longitude = 79.8612
 
     elif lat is not None and lon is not None:
         latitude = lat
