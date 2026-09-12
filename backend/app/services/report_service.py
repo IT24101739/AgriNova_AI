@@ -377,45 +377,57 @@ def get_or_create_farm(
 def delete_reports(db: Session, report_ids: List[uuid.UUID]) -> int:
     """
     Delete one or more reports from Supabase and local SQLite database.
-    Safely cleans up referencing rows in officer_tickets, notifications,
-    ai_feedback, and analysis_results.
+    Cascade deletes all referencing officer_tickets, field_visits,
+    lab_requests, notifications, ai_feedback, and analysis_results.
     """
     id_strs = [str(rid) for rid in report_ids]
     if not id_strs:
         return 0
 
-    # 1. Delete from Supabase
+    # 1. Cascade delete in Supabase
     try:
         from app.database import get_supabase
         sb = get_supabase()
 
         for rid in id_strs:
             try:
-                sb.table("officer_tickets").delete().eq("report_id", rid).execute()
-            except Exception:
-                pass
-            try:
-                sb.table("notifications").delete().eq("report_id", rid).execute()
-            except Exception:
-                pass
-            try:
-                sb.table("ai_feedback").delete().eq("report_id", rid).execute()
-            except Exception:
-                pass
-            try:
-                sb.table("analysis_results").delete().eq("report_id", rid).execute()
-            except Exception:
-                pass
+                # Find all officer_tickets referencing this report
+                t_res = sb.table("officer_tickets").select("id").eq("report_id", rid).execute()
+                t_ids = [t["id"] for t in (t_res.data or []) if "id" in t]
+                if t_ids:
+                    # Cascade delete field_visits and lab_requests linked to these tickets
+                    try:
+                        sb.table("field_visits").delete().in_("ticket_id", t_ids).execute()
+                    except Exception as e:
+                        logger.warning("Supabase field_visits cascade delete: %s", e)
+                    try:
+                        sb.table("lab_requests").delete().in_("ticket_id", t_ids).execute()
+                    except Exception as e:
+                        logger.warning("Supabase lab_requests cascade delete: %s", e)
+                    # Delete the tickets themselves
+                    sb.table("officer_tickets").delete().in_("id", t_ids).execute()
+                    logger.info("Cascade deleted officer tickets %s for report %s", t_ids, rid)
 
-        sb.table("reports").delete().in_("id", id_strs).execute()
-        logger.info("Deleted reports from Supabase: %s", id_strs)
+                # Delete any other tables referencing report_id directly
+                for table in ["lab_requests", "notifications", "ai_feedback", "analysis_results", "outbreak_candidates"]:
+                    try:
+                        sb.table(table).delete().eq("report_id", rid).execute()
+                    except Exception:
+                        pass
+
+                # Finally delete the report itself from Supabase
+                sb.table("reports").delete().eq("id", rid).execute()
+                logger.info("Successfully deleted report %s from Supabase", rid)
+            except Exception as e:
+                logger.warning("Error deleting report %s from Supabase: %s", rid, e)
+
     except Exception as exc:
         logger.warning("Supabase delete reports failed (%s). Continuing with local delete.", exc)
 
-    # 2. Delete from local SQLite DB
+    # 2. Cascade delete in local SQLite DB
     try:
-        from app.models.report_model import AnalysisResult, Report, OfficerTicket, FieldVisit, LabRequest, AiFeedback
-        # Find any tickets referencing these reports to clean up visits and lab requests
+        from app.models.report_model import AnalysisResult, Report, OfficerTicket, FieldVisit, LabRequest, AIFeedback, Notification
+        # Find any tickets referencing these reports
         tickets = db.query(OfficerTicket).filter(OfficerTicket.report_id.in_(report_ids)).all()
         ticket_ids = [t.id for t in tickets]
         if ticket_ids:
@@ -423,7 +435,9 @@ def delete_reports(db: Session, report_ids: List[uuid.UUID]) -> int:
             db.query(LabRequest).filter(LabRequest.ticket_id.in_(ticket_ids)).delete(synchronize_session=False)
             db.query(OfficerTicket).filter(OfficerTicket.id.in_(ticket_ids)).delete(synchronize_session=False)
 
-        db.query(AiFeedback).filter(AiFeedback.report_id.in_(report_ids)).delete(synchronize_session=False)
+        db.query(LabRequest).filter(LabRequest.report_id.in_(report_ids)).delete(synchronize_session=False)
+        db.query(AIFeedback).filter(AIFeedback.report_id.in_(report_ids)).delete(synchronize_session=False)
+        db.query(Notification).filter(Notification.report_id.in_(report_ids)).delete(synchronize_session=False)
         db.query(AnalysisResult).filter(AnalysisResult.report_id.in_(report_ids)).delete(synchronize_session=False)
         deleted_count = db.query(Report).filter(Report.id.in_(report_ids)).delete(synchronize_session=False)
         db.commit()

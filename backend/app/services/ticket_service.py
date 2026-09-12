@@ -149,7 +149,27 @@ def get_tickets(
             q = q.eq("assigned_officer", assigned_officer)
 
         res = q.execute()
-        tickets = res.data or []
+        raw_tickets = res.data or []
+
+        # Filter out orphaned tickets whose report has been deleted
+        tickets = []
+        orphaned_ids = []
+        for t in raw_tickets:
+            # If ticket has report_id but report was deleted (reports is None or empty)
+            if t.get("report_id") and not t.get("reports"):
+                orphaned_ids.append(t["id"])
+            else:
+                tickets.append(t)
+
+        # Proactively purge orphaned tickets from Supabase
+        if orphaned_ids:
+            try:
+                db.table("field_visits").delete().in_("ticket_id", orphaned_ids).execute()
+                db.table("lab_requests").delete().in_("ticket_id", orphaned_ids).execute()
+                db.table("officer_tickets").delete().in_("id", orphaned_ids).execute()
+                logger.info("Purged orphaned officer tickets: %s", orphaned_ids)
+            except Exception as pe:
+                logger.warning("Error purging orphaned tickets: %s", pe)
     except Exception as exc:
         logger.warning("get_tickets Supabase query failed: %s", exc)
 
