@@ -4,7 +4,9 @@ AgriShield — FastAPI Application Entry Point
 Startup sequence:
   1. Load AI models (disease classifier) — once, at lifespan start
   2. Mount CORS middleware
-  3. Include routers
+  3. Include routers:
+     - Feature Slice 1 (Member 1): Farmer crop image upload & classification
+     - Feature Slice 2 (Member 2): Smart diagnosis, weather, outbreak, advisory
 
 Run with: uvicorn app.main:app --reload --port 8000
 """
@@ -17,6 +19,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.routers import reports
+from app.routers.analysis import router as analysis_router
+from app.routers.weather import router as weather_router
+from app.routers.additional_image import router as additional_image_router
 from app.ai.disease_classifier import get_classifier
 
 logging.basicConfig(
@@ -53,20 +58,26 @@ async def lifespan(app: FastAPI):
 # ---------------------------------------------------------------------------
 
 app = FastAPI(
-    title="AgriShield API",
-    description="Crop disease early-warning platform — Feature Slice 1: Farmer Reporting",
+    title="AgriShield / CropGuard AI API",
+    description="Crop disease early-warning platform: Image Diagnosis, Weather Check, Regional Outbreaks & Advisory",
     version="1.0.0",
     lifespan=lifespan,
 )
 
 
 # ---------------------------------------------------------------------------
-# CORS — allow frontend origin
+# CORS — allow frontend origins
 # ---------------------------------------------------------------------------
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url, "http://localhost:5173", "http://localhost:3000"],
+    allow_origins=[
+        getattr(settings, "frontend_url", "http://localhost:5173"),
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "*"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -77,12 +88,27 @@ app.add_middleware(
 # Routers
 # ---------------------------------------------------------------------------
 
+# Member 1 routers
 app.include_router(reports.router)
 
+# Member 2 routers
+app.include_router(analysis_router)
+app.include_router(weather_router)
+app.include_router(additional_image_router)
+
 
 # ---------------------------------------------------------------------------
-# Health check
+# Health & Root check
 # ---------------------------------------------------------------------------
+
+@app.get("/")
+def read_root():
+    return {
+        "status": "online",
+        "service": "AgriShield / CropGuard AI API",
+        "slices": ["Feature Slice 1: Image Diagnosis", "Feature Slice 2: Advisory Engine"]
+    }
+
 
 @app.get("/health", tags=["health"])
 def health():

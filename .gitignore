@@ -5,6 +5,7 @@ venv/
 .venv/
 env/
 backend/venv/
+backend/.venv/
 
 # Environment variables & secrets
 .env
@@ -41,6 +42,7 @@ share/python-wheels/
 # Frontend builds
 frontend/dist/
 frontend/dist-ssr/
+frontend/.vite/
 dist/
 
 # Logs

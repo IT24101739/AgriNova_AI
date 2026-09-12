@@ -1,0 +1,212 @@
+{
+  "Tomato Early Blight": {
+    "steps": [
+      "Remove and destroy all heavily spotted or yellowed leaves immediately.",
+      "Water your plants at the base only — do not wet the leaves.",
+      "Space plants further apart so air can move between them freely.",
+      "Place a layer of mulch around the base of each plant to stop soil from splashing up.",
+      "Check remaining plants every 2–3 days and remove any newly affected leaves."
+    ],
+    "escalate_if": [
+      "Spots spread to more than 30% of the plant",
+      "Symptoms appear on fruits as well as leaves",
+      "Disease continues spreading after one week of management"
+    ]
+  },
+
+  "Tomato Late Blight": {
+    "steps": [
+      "Immediately remove and burn all infected leaves, stems, and fruit — do not leave them in the field.",
+      "Stop all overhead watering. Water only at the base of each plant.",
+      "Ensure water does not stand in or around the field — improve drainage if needed.",
+      "Do not walk through the field when plants are wet — this spreads the disease.",
+      "Warn nearby farmers, as this disease spreads quickly between farms."
+    ],
+    "escalate_if": [
+      "Dark water-soaked patches appear on stems or fruit",
+      "White fuzzy growth is visible on the underside of leaves",
+      "Plants begin to collapse or die within days",
+      "Disease spreads to multiple plants within 24 hours"
+    ]
+  },
+
+  "Tomato Leaf Mold": {
+    "steps": [
+      "Improve air movement in the growing area by removing extra leaves and opening vents if indoors.",
+      "Remove affected leaves carefully without shaking the plant — bag and dispose of them.",
+      "Water only at the base and avoid wetting the leaves at any time.",
+      "Increase the distance between plants to allow better airflow.",
+      "Clean and sanitise tools between plants to avoid spreading the mold."
+    ],
+    "escalate_if": [
+      "Mold covers more than half of the leaf surface area",
+      "Yellowing spreads to new healthy leaves rapidly",
+      "Fruit production drops noticeably"
+    ]
+  },
+
+  "Tomato Bacterial Spot": {
+    "steps": [
+      "Remove and destroy all leaves and fruit showing dark water-soaked or raised spots.",
+      "Avoid touching healthy plants after handling infected ones — wash hands with soap.",
+      "Do not work in the field when plants are wet.",
+      "Improve drainage around each plant to reduce water splash between plants.",
+      "Clean stakes, cages, and tools used in the field with soapy water."
+    ],
+    "escalate_if": [
+      "Spots appear on fruit causing large dark raised lesions",
+      "Disease spreads rapidly during rainy periods",
+      "Plants begin to shed leaves quickly"
+    ]
+  },
+
+  "Potato Early Blight": {
+    "steps": [
+      "Remove lower leaves with brown circular spots that have ring-like patterns inside them.",
+      "Avoid watering late in the day so leaves have time to dry before nightfall.",
+      "Do not use infected plant material as mulch or compost.",
+      "Next season, plant potato or tomato in a different part of the field.",
+      "Check the crop every 3–4 days and remove newly spotted leaves promptly."
+    ],
+    "escalate_if": [
+      "Spots spread rapidly to upper leaves",
+      "Tubers show dark sunken patches after harvest",
+      "More than 40% of the plant leaves are affected"
+    ]
+  },
+
+  "Potato Late Blight": {
+    "steps": [
+      "Remove and destroy all above-ground infected plant parts immediately — burn or bury them deeply.",
+      "Do not leave cut or broken infected stems in the field.",
+      "If the crop is severely affected, harvest healthy tubers as soon as possible.",
+      "Store harvested tubers in a cool, dry, and well-ventilated place away from sunlight.",
+      "Inform your local agriculture officer — this is a high-risk disease that spreads quickly."
+    ],
+    "escalate_if": [
+      "Dark rot is found inside harvested tubers",
+      "The entire field shows disease signs within a few days",
+      "A wet rot smell comes from soil or stored tubers"
+    ]
+  },
+
+  "Rice Brown Spot": {
+    "steps": [
+      "Ensure the paddy field has good drainage — remove any standing water that is not needed.",
+      "Reduce nitrogen fertilizer use immediately if you recently applied a large amount.",
+      "Remove and dispose of heavily infected tillers carefully outside the field.",
+      "Maintain balanced soil nutrition — get a soil test if you can.",
+      "Keep field bunds free of weeds and crop debris."
+    ],
+    "escalate_if": [
+      "Brown spots appear on the grain heads at harvest time",
+      "More than 25% of the tillers in the field show symptoms",
+      "Expected grain yield looks significantly reduced"
+    ]
+  },
+
+  "Rice Leaf Blast": {
+    "steps": [
+      "Reduce or stop applying nitrogen fertilizer immediately.",
+      "Drain the field for a few days to lower humidity at the plant level.",
+      "Remove and burn heavily infected tillers — do not leave them in the water.",
+      "In future planting, space seedlings further apart to improve airflow.",
+      "Watch the field closely every day, especially on cool and humid nights."
+    ],
+    "escalate_if": [
+      "Blast lesions reach the neck of the plant — neck blast",
+      "Empty whitish grain heads appear at harvest",
+      "Large sections of the field show uniform symptoms quickly"
+    ]
+  },
+
+  "Corn Common Rust": {
+    "steps": [
+      "Remove lower leaves that are heavily covered with orange rust pustules.",
+      "Use drip or furrow irrigation — avoid any overhead watering.",
+      "Space plants wider apart in future seasons to allow better air movement.",
+      "Monitor young leaves closely during cool and humid weather periods.",
+      "After harvest, remove and dispose of all infected crop debris from the field."
+    ],
+    "escalate_if": [
+      "Rust pustules cover more than 50% of the leaf area",
+      "Symptoms appear on husks or cobs",
+      "The entire field shows symptoms uniformly"
+    ]
+  },
+
+  "Corn Gray Leaf Spot": {
+    "steps": [
+      "Remove infected leaves from the lower canopy early in the season.",
+      "Avoid late-season overhead watering.",
+      "In future seasons, plant in fields where corn has not been grown recently.",
+      "Increase plant spacing to reduce humidity within the crop canopy.",
+      "Clean and remove all crop residue after harvest to reduce carryover."
+    ],
+    "escalate_if": [
+      "Lesions cover more than a third of the upper canopy leaves",
+      "Ear shanks and husks show symptoms",
+      "Premature plant death occurs before grain maturity"
+    ]
+  },
+
+  "Pepper Bell Bacterial Spot": {
+    "steps": [
+      "Remove and destroy all leaves and fruits showing dark water-soaked spots.",
+      "Wash hands thoroughly before touching healthy plants after handling infected ones.",
+      "Avoid working in the field while plants are wet from rain or dew.",
+      "Improve field drainage to reduce water splashing between plants.",
+      "Disinfect all tools and stakes used in the field with soapy water."
+    ],
+    "escalate_if": [
+      "Spots appear on fruit causing large raised dark lesions",
+      "Disease spreads rapidly during rainy periods to most plants in the field",
+      "Plants lose a large number of leaves quickly"
+    ]
+  },
+
+  "Grape Black Rot": {
+    "steps": [
+      "Remove and destroy all mummified berries and leaves showing brown circular spots.",
+      "Prune infected canes completely and remove them from the vineyard area.",
+      "Improve airflow through the canopy by proper training and pruning each season.",
+      "Handle fruit carefully to avoid cuts and bruises that allow infection.",
+      "Keep the ground under vines clear of fallen fruit and leaves throughout the season."
+    ],
+    "escalate_if": [
+      "More than 20% of the grape cluster is shrivelled or infected",
+      "Infection appears close to harvest time",
+      "Mummified berries remain attached into the next growing season"
+    ]
+  },
+
+  "Apple Scab": {
+    "steps": [
+      "Rake and remove all fallen leaves and fruit from the ground below the tree.",
+      "Prune dense branches to open the canopy and allow sunlight and airflow inside.",
+      "Avoid wetting the leaves when watering — water at the base of the tree only.",
+      "Dispose of all infected material away from the orchard — do not compost it.",
+      "Monitor the tree closely during wet spring and early summer periods."
+    ],
+    "escalate_if": [
+      "Scab lesions cover the majority of fruit surfaces",
+      "Severe defoliation occurs before mid-summer",
+      "New infections appear on current-season growth rapidly"
+    ]
+  },
+
+  "Apple Black Rot": {
+    "steps": [
+      "Remove all mummified fruit, cankers, and dead wood from the tree immediately.",
+      "Prune infected branches at least 15 cm below any visible wound or canker.",
+      "Rake and destroy all fallen leaves and fruit under the tree.",
+      "Avoid wounding the tree bark during pruning or harvesting.",
+      "Apply wound sealant to large pruning cuts to prevent re-entry of disease."
+    ],
+    "escalate_if": [
+      "Cankers appear on the main trunk or large scaffold branches",
+      "More than 30% of fruit shows rot before or at harvest",
+      "Tree shows significant dieback of major branches"
+    ]
+  }
+}

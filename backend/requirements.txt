@@ -1,35 +1,25 @@
-# Backend dependencies — Python 3.14 (cp314) compatible
-# Strict pins only where pre-built cp314 wheels are confirmed.
-# Flexible >=  pins for packages that need to build from source on older versions.
-
+# AgriShield Backend dependencies
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
 python-multipart==0.0.9
 
-# pydantic 2.10+ ships pydantic-core with cp314 wheels (Rust compile not needed)
 pydantic>=2.10.0,<3.0.0
 pydantic-settings>=2.5.0,<3.0.0
-
-sqlalchemy>=2.0.36
-
-# psycopg2-binary: latest release has cp314 wheels
-psycopg2-binary>=2.9.9
-
-supabase>=2.4.6
 python-dotenv==1.0.1
+httpx>=0.27.0
+supabase>=2.4.6
 
-# Pillow 11.3.0 ships cp314 wheels for Windows
+# Member 1 (Image classifier dependencies)
+sqlalchemy>=2.0.36
+psycopg2-binary>=2.9.9
 Pillow==11.3.0
-
-# PyTorch — cp314 wheels confirmed on PyPI
 torch==2.14.0
 torchvision==0.29.0
-
-# opencv abi3 wheel works on any Python >= 3.7
 opencv-python-headless==4.10.0.84
-
-# numpy 2.5.3 ships cp314 wheels for Windows
 numpy==2.5.3
-
 python-jose[cryptography]>=3.3.0
-httpx>=0.27.0
+
+# Member 2 (LLM & Advisory dependencies)
+google-genai>=0.1.1
+google-generativeai>=0.4.0
+openai>=1.14.0
