@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PriorityBadge from './PriorityBadge';
 import { ArrowUpDown, ChevronRight, Trash2, Loader2 } from 'lucide-react';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+import { API_BASE } from '../config/api';
 
 const STATUS_PILL = {
   OPEN:                 'bg-slate-700/60 text-slate-300',

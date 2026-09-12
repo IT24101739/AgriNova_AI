@@ -1,10 +1,8 @@
-// API base URL — edit in .env as VITE_API_URL
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
 import axios from 'axios';
+import { API_BASE_URL } from '../config/api';
 
 const api = axios.create({
-  baseURL: BASE,
+  baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 

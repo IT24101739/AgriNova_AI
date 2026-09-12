@@ -20,8 +20,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import { API_BASE_URL } from '../config/api';
 
 export default function Navbar() {
   const location = useLocation();
@@ -29,28 +28,51 @@ export default function Navbar() {
   const { user, logout } = useAuth();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [backendStatus, setBackendStatus] = useState('checking');
+  const [backendStatus, setBackendStatus] = useState('checking'); // 'checking' | 'online' | 'waking' | 'offline'
+  const [retryTrigger, setRetryTrigger] = useState(0);
   const [unreadCount, setUnreadCount] = useState(2);
 
-  // Check backend health periodically
+  // Check backend health periodically with cold-start tolerance
   useEffect(() => {
+    let cancelled = false;
+    let failCount = 0;
+
     const checkHealth = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/health`, { timeout: 3000 });
-        if (res.status === 200) {
-          setBackendStatus('online');
-        } else {
-          setBackendStatus('offline');
+        const res = await axios.get(`${API_BASE_URL}/health`, { timeout: 12000 });
+        if (!cancelled) {
+          if (res.status === 200) {
+            setBackendStatus('online');
+            failCount = 0;
+          } else {
+            setBackendStatus('offline');
+          }
         }
       } catch (err) {
-        setBackendStatus('offline');
+        if (!cancelled) {
+          failCount += 1;
+          // Render free tier cold-starts can take 25-45 seconds.
+          // Show "waking" on first few timeouts or connection errors.
+          if (failCount <= 4) {
+            setBackendStatus('waking');
+          } else {
+            setBackendStatus('offline');
+          }
+        }
       }
     };
 
     checkHealth();
-    const interval = setInterval(checkHealth, 30000);
-    return () => clearInterval(interval);
-  }, []);
+
+    // Fast retry when waking up or checking (every 6s), normal check when online (every 40s)
+    const intervalTime = backendStatus === 'online' ? 40000 : 6000;
+    const interval = setInterval(checkHealth, intervalTime);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [backendStatus === 'online', retryTrigger]);
 
   const handleLogout = () => {
     logout();
@@ -275,16 +297,42 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             
             {/* Backend status pill */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900/80 border border-white/10 text-[10px] font-mono">
-              <span className={`w-1.5 h-1.5 rounded-full ${
-                backendStatus === 'online' ? 'bg-emerald-400 animate-pulse' :
-                backendStatus === 'offline' ? 'bg-red-400' : 'bg-amber-400'
-              }`} />
-              <span className="text-slate-300">
-                {backendStatus === 'online' ? 'API Online' :
-                 backendStatus === 'offline' ? 'Offline' : 'Connecting...'}
+            <button
+              type="button"
+              onClick={() => {
+                setBackendStatus('checking');
+                setRetryTrigger((t) => t + 1);
+              }}
+              title={
+                backendStatus === 'online'
+                  ? 'Backend API is connected and healthy.'
+                  : backendStatus === 'waking'
+                  ? 'Cloud backend is waking up from sleep (~20-45s on free hosting). Click to test again.'
+                  : backendStatus === 'checking'
+                  ? 'Connecting to backend API...'
+                  : 'Backend API is currently unreachable. Click to retry.'
+              }
+              className="group flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900/80 hover:bg-slate-800/90 border border-white/10 hover:border-emerald-500/30 text-[10px] font-mono cursor-pointer transition-all duration-200"
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  backendStatus === 'online'
+                    ? 'bg-emerald-400 animate-pulse'
+                    : backendStatus === 'waking' || backendStatus === 'checking'
+                    ? 'bg-amber-400 animate-ping'
+                    : 'bg-red-400'
+                }`}
+              />
+              <span className="text-slate-300 group-hover:text-white transition-colors">
+                {backendStatus === 'online'
+                  ? 'API Online'
+                  : backendStatus === 'waking'
+                  ? 'Waking Up...'
+                  : backendStatus === 'checking'
+                  ? 'Connecting...'
+                  : 'API Offline'}
               </span>
-            </div>
+            </button>
 
             {/* Quick Upload CTA (Only visible for Farmer) */}
             {user?.role === 'farmer' && (

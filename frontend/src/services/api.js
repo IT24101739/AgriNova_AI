@@ -5,9 +5,10 @@
  */
 
 import axios from 'axios';
+import { API_BASE_URL } from '../config/api';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: `${API_BASE_URL}/api`,
   timeout: 60000, // 60s — AI inference can be slow
 });
 

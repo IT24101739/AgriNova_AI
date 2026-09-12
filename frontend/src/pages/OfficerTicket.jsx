@@ -10,8 +10,7 @@ import {
   ClipboardList, MapPin, Calendar, RefreshCw, ChevronDown,
   Trash2, CheckCheck,
 } from 'lucide-react';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+import { API_BASE } from '../config/api';
 
 const DISEASES = [
   'Tomato Early Blight','Tomato Late Blight','Tomato Leaf Curl',

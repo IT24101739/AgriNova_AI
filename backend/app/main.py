@@ -63,16 +63,10 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-frontend_url = os.getenv("FRONTEND_URL", getattr(settings, "frontend_url", "http://localhost:5173"))
+# Enable flexible CORS for local development and cloud deployments (Vercel, Netlify, Render, etc.)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        frontend_url,
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "*"
-    ],
+    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -108,6 +102,7 @@ def read_root():
 
 
 @app.get("/health", tags=["health"])
+@app.get("/api/health", tags=["health"])
 def health():
     classifier = get_classifier()
     return {
