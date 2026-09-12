@@ -1,5 +1,5 @@
 /**
- * FarmerHome — Dedicated Farmer Command Hub.
+ * FarmerHome — Dedicated Farmer Command Hub with Rich Agricultural Visuals.
  * Tailored 100% for farmers: Leaf Diagnostic Scanning, Crop Health Management,
  * Multi-lingual Advisory (Sinhala, Tamil, English), and Local Weather Spray Windows.
  */
@@ -17,14 +17,13 @@ import {
   CheckCircle2,
   Cpu,
   ChevronRight,
-  TrendingUp,
   Sparkles,
   Sun,
   Wind,
   Droplets,
-  AlertTriangle,
   History,
-  FileCheck2
+  ShieldCheck,
+  Sprout
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -48,18 +47,27 @@ export default function FarmerHome() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#080d1a] text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white pb-16">
+    <div className="min-h-screen bg-[#05130b] text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white pb-16">
       
-      {/* ── Farmer Hero Banner ── */}
-      <section className="relative overflow-hidden pt-8 pb-12 px-4 sm:px-6 lg:px-8 border-b border-white/5">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[320px] bg-gradient-to-tr from-emerald-500/15 via-teal-500/10 to-green-500/15 blur-[120px] rounded-full pointer-events-none" />
+      {/* ── Farmer Hero Banner with Agricultural Landscape Backdrop ── */}
+      <section className="relative overflow-hidden pt-8 pb-14 px-4 sm:px-6 lg:px-8 border-b border-emerald-500/20">
         
+        {/* Real Agricultural Background Image with soft gradient blending */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src="/images/agri_hero.jpg"
+            alt="Sri Lankan terraced fields"
+            className="w-full h-full object-cover object-center opacity-25 filter blur-[1px] scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#05130b]/90 via-[#05130b]/85 to-[#05130b]" />
+        </div>
+
         <div className="max-w-7xl mx-auto relative z-10">
           
           {/* Top Pill */}
           <div className="flex justify-center sm:justify-start mb-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold tracking-wide shadow-sm">
-              <Sparkles className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-950/80 border border-emerald-500/35 text-emerald-300 text-xs font-semibold tracking-wide shadow-lg backdrop-blur-md">
+              <Sprout className="w-4 h-4 text-emerald-400" />
               <span>AI Crop Pathology & Instant Treatment Advisory</span>
             </div>
           </div>
@@ -70,11 +78,11 @@ export default function FarmerHome() {
             <div className="lg:col-span-7 text-center sm:text-left">
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.15] mb-4">
                 Protect Your Harvest <br />
-                <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-green-300 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-emerald-400 via-lime-300 to-amber-300 bg-clip-text text-transparent">
                   With Instant AI Leaf Scan
                 </span>
               </h1>
-              <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-2xl mb-8">
+              <p className="text-slate-200 text-sm sm:text-base leading-relaxed max-w-2xl mb-8 font-normal">
                 Upload a photo of your infected leaf. Our neural network detects the disease in seconds, 
                 calculates lesion severity, and provides immediate treatment instructions in 
                 <strong className="text-emerald-300 font-semibold"> Sinhala, Tamil, or English</strong> backed by local climate forecasts.
@@ -85,7 +93,7 @@ export default function FarmerHome() {
                 <button
                   id="btn-hero-new-scan"
                   onClick={() => navigate('/reports/new')}
-                  className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 hover:from-emerald-500 hover:to-teal-400 shadow-xl shadow-emerald-500/25 active:scale-95 transition-all duration-200"
+                  className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-emerald-600 via-green-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 shadow-xl shadow-emerald-500/30 active:scale-95 transition-all duration-200"
                 >
                   <Camera className="w-4 h-4" />
                   <span>Start New Leaf Scan</span>
@@ -94,7 +102,7 @@ export default function FarmerHome() {
 
                 <button
                   onClick={() => navigate('/alerts')}
-                  className="inline-flex items-center gap-2 px-5 py-3.5 rounded-xl font-semibold text-sm text-slate-200 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 backdrop-blur-md active:scale-95 transition-all duration-200"
+                  className="inline-flex items-center gap-2 px-5 py-3.5 rounded-xl font-semibold text-sm text-slate-200 bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-500/30 hover:border-emerald-500/50 backdrop-blur-md active:scale-95 transition-all duration-200"
                 >
                   <CloudRain className="w-4 h-4 text-teal-400" />
                   <span>Check Disease & Weather Alerts</span>
@@ -104,56 +112,56 @@ export default function FarmerHome() {
 
             {/* Right Col: Registered Farmer Farm Card */}
             <div className="lg:col-span-5">
-              <div className="glass-elevated rounded-2xl p-6 border border-white/10 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl" />
+              <div className="glass-elevated rounded-2xl p-6 border border-emerald-500/30 shadow-2xl relative overflow-hidden backdrop-blur-xl">
+                <div className="absolute top-0 right-0 w-36 h-36 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
                 
-                <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                <div className="flex items-center justify-between pb-4 border-b border-emerald-500/20 mb-4">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
-                      <span className="text-base">🌾</span>
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/30 to-green-600/30 border border-emerald-500/40 flex items-center justify-center shadow-inner">
+                      <span className="text-lg">🌾</span>
                     </div>
                     <div>
                       <h2 className="text-xs font-bold uppercase tracking-wider text-white">
                         {user?.name || 'Sunil Wickramasinghe'}
                       </h2>
-                      <p className="text-[10px] text-emerald-400 font-medium">
+                      <p className="text-[10px] text-emerald-400 font-semibold">
                         {user?.district || 'Gampaha District'} • Registered Farm
                       </p>
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                     Farm ID: #01
                   </span>
                 </div>
 
                 {/* Farm Capabilities */}
                 <div className="space-y-2.5 text-xs">
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#081b11]/80 border border-emerald-500/15">
                     <span className="text-slate-400">Supported Crops</span>
                     <span className="font-semibold text-white">Tomato, Potato, Pepper, Rice, Chili</span>
                   </div>
 
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#081b11]/80 border border-emerald-500/15">
                     <span className="text-slate-400">AI Diagnostic Engine</span>
                     <span className="font-semibold text-emerald-300">EfficientNet-B0 + OpenCV Lesion</span>
                   </div>
 
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#081b11]/80 border border-emerald-500/15">
                     <span className="text-slate-400">Advisory Languages</span>
-                    <span className="font-semibold text-teal-300">සිංහල • தமிழ் • English</span>
+                    <span className="font-semibold text-lime-300">සිංහල • தமிழ் • English</span>
                   </div>
 
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
-                    <span className="text-slate-400">Weather Forecast Telemetry</span>
-                    <span className="font-semibold text-blue-300">Open-Meteo 7-Day Live Feed</span>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#081b11]/80 border border-emerald-500/15">
+                    <span className="text-slate-400">Weather Telemetry</span>
+                    <span className="font-semibold text-amber-300">Open-Meteo 7-Day Live Feed</span>
                   </div>
                 </div>
 
                 {/* Ready Status */}
-                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[11px]">
+                <div className="mt-4 pt-3 border-t border-emerald-500/20 flex items-center justify-between text-[11px]">
                   <span className="flex items-center gap-1.5 text-slate-300">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    AI Scanner Ready for Upload
+                    AI Scanner Ready for Leaf Upload
                   </span>
                   <span className="font-mono text-emerald-400 font-bold">FastAPI Connected</span>
                 </div>
@@ -162,118 +170,158 @@ export default function FarmerHome() {
           </div>
 
           {/* ── Key Farmer Metrics Ribbon ── */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-8 border-t border-white/5">
-            <div className="glass rounded-xl p-3 sm:p-4 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-8 border-t border-emerald-500/20">
+            <div className="glass rounded-xl p-3 sm:p-4 text-center border-emerald-500/20">
               <p className="text-xl sm:text-2xl font-black text-white">&lt; 1.5s</p>
               <p className="text-[11px] text-slate-400 font-medium">Instant AI Diagnosis</p>
             </div>
-            <div className="glass rounded-xl p-3 sm:p-4 text-center">
+            <div className="glass rounded-xl p-3 sm:p-4 text-center border-emerald-500/20">
               <p className="text-xl sm:text-2xl font-black text-emerald-400">3 Languages</p>
               <p className="text-[11px] text-slate-400 font-medium">සිංහල / தமிழ் / English</p>
             </div>
-            <div className="glass rounded-xl p-3 sm:p-4 text-center">
-              <p className="text-xl sm:text-2xl font-black text-teal-300">HSV Lesion %</p>
+            <div className="glass rounded-xl p-3 sm:p-4 text-center border-emerald-500/20">
+              <p className="text-xl sm:text-2xl font-black text-lime-300">HSV Lesion %</p>
               <p className="text-[11px] text-slate-400 font-medium">Severity Estimation</p>
             </div>
-            <div className="glass rounded-xl p-3 sm:p-4 text-center">
-              <p className="text-xl sm:text-2xl font-black text-blue-400">Live Weather</p>
-              <p className="text-[11px] text-slate-400 font-medium">Safe Spray Windows</p>
+            <div className="glass rounded-xl p-3 sm:p-4 text-center border-emerald-500/20">
+              <p className="text-xl sm:text-2xl font-black text-amber-400">Safe Spray</p>
+              <p className="text-[11px] text-slate-400 font-medium">Weather Rain Window</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Main Farmer Services ── */}
+      {/* ── Main Farmer Services with Visual Cards ── */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 flex-1 w-full space-y-12">
         
-        {/* ── Core Farmer Action Cards ── */}
+        {/* ── Core Farmer Action Cards with Agricultural Images ── */}
         <div>
           <div className="mb-6">
-            <h2 className="text-xl font-bold text-white tracking-tight">Farmer Diagnostic Services</h2>
-            <p className="text-xs text-slate-400">Everything you need to protect and treat your crops</p>
+            <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+              <Leaf className="w-5 h-5 text-emerald-400" />
+              Farmer Diagnostic Services
+            </h2>
+            <p className="text-xs text-slate-400">Everything you need to diagnose and treat your crops</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            {/* Card 1: AI Leaf Scanner */}
+            {/* Card 1: AI Leaf Scanner with Farmer Photo */}
             <div
               onClick={() => navigate('/reports/new')}
-              className="glass rounded-2xl p-6 border border-white/10 hover:border-emerald-500/40 cursor-pointer group transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/10 flex flex-col justify-between"
+              className="glass-elevated rounded-2xl overflow-hidden border border-emerald-500/30 hover:border-emerald-400 cursor-pointer group transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-emerald-500/15 flex flex-col justify-between"
             >
               <div>
-                <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Camera className="w-6 h-6 text-emerald-400" />
-                </div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                {/* Photo header */}
+                <div className="relative h-44 overflow-hidden">
+                  <img
+                    src="/images/farmer_scan.jpg"
+                    alt="Farmer inspecting crop foliage"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#091f14] via-transparent to-black/20" />
+                  <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider text-emerald-300 bg-emerald-950/80 px-2.5 py-1 rounded-md border border-emerald-500/30 backdrop-blur-md">
                     Step 1: Diagnose
                   </span>
-                  <span className="text-xs text-slate-500 font-mono">Mobile / Camera</span>
+                  <div className="absolute bottom-3 right-3 w-8 h-8 rounded-lg bg-emerald-500/90 text-white flex items-center justify-center shadow-md">
+                    <Camera className="w-4 h-4" />
+                  </div>
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2 group-hover:text-emerald-300 transition-colors">
-                  AI Leaf Diagnostic Scanner
-                </h3>
-                <p className="text-xs text-slate-400 leading-relaxed mb-4">
-                  Take or upload a clear photo of your plant leaf. Detect Early Blight, Late Blight, Leaf Curl, and more with exact infection percentages.
-                </p>
+
+                <div className="p-5">
+                  <h3 className="text-base font-bold text-white mb-2 group-hover:text-emerald-300 transition-colors">
+                    AI Leaf Diagnostic Scanner
+                  </h3>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Take or upload a clear photo of your plant leaf. Detect Early Blight, Late Blight, Leaf Curl, and more with exact lesion severity percentages.
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center text-xs font-semibold text-emerald-400 group-hover:translate-x-1 transition-transform">
+
+              <div className="px-5 pb-5 pt-2 flex items-center text-xs font-bold text-emerald-400 group-hover:translate-x-1 transition-transform">
                 <span>Open Diagnostic Scanner</span>
                 <ChevronRight className="w-4 h-4 ml-1" />
               </div>
             </div>
 
-            {/* Card 2: Smart Advisory & Treatments */}
+            {/* Card 2: Smart Advisory & Macro Plant Pathology Photo */}
             <div
               onClick={() => navigate('/alerts')}
-              className="glass rounded-2xl p-6 border border-white/10 hover:border-teal-500/40 cursor-pointer group transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-500/10 flex flex-col justify-between"
+              className="glass-elevated rounded-2xl overflow-hidden border border-emerald-500/30 hover:border-lime-400 cursor-pointer group transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-lime-500/15 flex flex-col justify-between"
             >
               <div>
-                <div className="w-12 h-12 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Leaf className="w-6 h-6 text-teal-400" />
-                </div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-md border border-teal-500/20">
+                {/* Photo header */}
+                <div className="relative h-44 overflow-hidden">
+                  <img
+                    src="/images/leaf_macro.jpg"
+                    alt="Plant leaf macro cellular pathology inspection"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#091f14] via-transparent to-black/20" />
+                  <span className="absolute top-3 left-3 text-[10px] font-bold uppercase tracking-wider text-lime-300 bg-emerald-950/80 px-2.5 py-1 rounded-md border border-lime-500/30 backdrop-blur-md">
                     Step 2: Treat
                   </span>
-                  <span className="text-xs text-slate-500 font-mono">Multi-lingual AI</span>
+                  <div className="absolute bottom-3 right-3 w-8 h-8 rounded-lg bg-lime-600/90 text-white flex items-center justify-center shadow-md">
+                    <Sprout className="w-4 h-4" />
+                  </div>
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2 group-hover:text-teal-300 transition-colors">
-                  Actionable Treatment Advice
-                </h3>
-                <p className="text-xs text-slate-400 leading-relaxed mb-4">
-                  Receive structured, organic, and chemical treatment guidelines customized for Sri Lankan farming conditions in your preferred language.
-                </p>
+
+                <div className="p-5">
+                  <h3 className="text-base font-bold text-white mb-2 group-hover:text-lime-300 transition-colors">
+                    Actionable Treatment Advisory
+                  </h3>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Receive structured organic and chemical treatment instructions tailored for Sri Lankan agricultural conditions in Sinhala, Tamil, or English.
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center text-xs font-semibold text-teal-400 group-hover:translate-x-1 transition-transform">
+
+              <div className="px-5 pb-5 pt-2 flex items-center text-xs font-bold text-lime-400 group-hover:translate-x-1 transition-transform">
                 <span>View Treatment Advisories</span>
                 <ChevronRight className="w-4 h-4 ml-1" />
               </div>
             </div>
 
-            {/* Card 3: Weather Spray Window */}
+            {/* Card 3: Weather Spray Window & Farm Radar */}
             <div
               onClick={() => navigate('/alerts')}
-              className="glass rounded-2xl p-6 border border-white/10 hover:border-blue-500/40 cursor-pointer group transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/10 flex flex-col justify-between"
+              className="glass-elevated rounded-2xl overflow-hidden border border-emerald-500/30 hover:border-amber-400 cursor-pointer group transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-amber-500/15 flex flex-col justify-between"
             >
               <div>
-                <div className="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <CloudRain className="w-6 h-6 text-blue-400" />
+                {/* Visual Header */}
+                <div className="relative h-44 bg-gradient-to-br from-amber-950/40 via-emerald-950/60 to-[#091f14] p-5 flex flex-col justify-between overflow-hidden">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 bg-amber-950/80 px-2.5 py-1 rounded-md border border-amber-500/30 backdrop-blur-md">
+                      Step 3: Spray Timing
+                    </span>
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+                      <CloudRain className="w-4 h-4" />
+                    </div>
+                  </div>
+                  
+                  {/* Climate Graphic */}
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <p className="text-3xl font-black text-white">84%</p>
+                      <p className="text-[11px] text-amber-300 font-semibold">Humidity • High Spore Risk</p>
+                    </div>
+                    <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      Safe Window: 48h
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/20">
-                    Step 3: Spray Timing
-                  </span>
-                  <span className="text-xs text-slate-500 font-mono">Live Forecast</span>
+
+                <div className="p-5">
+                  <h3 className="text-base font-bold text-white mb-2 group-hover:text-amber-300 transition-colors">
+                    Weather & Spray Safety Window
+                  </h3>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Check humidity and rainfall forecasts before applying fungicide or pesticides to prevent expensive agrochemicals from washing away in the rain.
+                  </p>
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">
-                  Weather & Spray Window
-                </h3>
-                <p className="text-xs text-slate-400 leading-relaxed mb-4">
-                  Check humidity and rainfall forecasts before applying fungicide or pesticides to prevent chemicals from washing away in the rain.
-                </p>
               </div>
-              <div className="flex items-center text-xs font-semibold text-blue-400 group-hover:translate-x-1 transition-transform">
+
+              <div className="px-5 pb-5 pt-2 flex items-center text-xs font-bold text-amber-400 group-hover:translate-x-1 transition-transform">
                 <span>Check Weather & Alerts</span>
                 <ChevronRight className="w-4 h-4 ml-1" />
               </div>
@@ -282,37 +330,37 @@ export default function FarmerHome() {
         </div>
 
         {/* ── Farm Weather Telemetry Strip ── */}
-        <div className="glass-elevated rounded-2xl p-6 border border-white/10">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5 flex-wrap gap-2">
+        <div className="glass-elevated rounded-2xl p-6 border border-emerald-500/30">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-emerald-500/20 flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <Sun className="w-5 h-5 text-amber-400" />
               <h3 className="font-bold text-sm text-white">Local Farm Weather & Spray Safety Index</h3>
             </div>
-            <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+            <span className="text-[11px] font-mono text-emerald-300 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
               Gampaha Field Station • Live
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/5">
+            <div className="p-3.5 rounded-xl bg-[#081b11] border border-emerald-500/15">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-slate-400">Temperature</span>
                 <Sun className="w-4 h-4 text-amber-400" />
               </div>
               <p className="text-xl font-black text-white">28.4°C</p>
-              <p className="text-[10px] text-slate-500 mt-1">Normal growing range</p>
+              <p className="text-[10px] text-slate-400 mt-1">Normal growing range</p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/5">
+            <div className="p-3.5 rounded-xl bg-[#081b11] border border-emerald-500/15">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-slate-400">Relative Humidity</span>
                 <Droplets className="w-4 h-4 text-blue-400" />
               </div>
               <p className="text-xl font-black text-amber-400">84%</p>
-              <p className="text-[10px] text-amber-400/80 mt-1">High: Fungal risk elevated</p>
+              <p className="text-[10px] text-amber-400 mt-1">High: Fungal spore risk elevated</p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/5">
+            <div className="p-3.5 rounded-xl bg-[#081b11] border border-emerald-500/15">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-slate-400">Wind Velocity</span>
                 <Wind className="w-4 h-4 text-teal-400" />
@@ -321,7 +369,7 @@ export default function FarmerHome() {
               <p className="text-[10px] text-emerald-400 mt-1">Gentle: Ideal for spraying</p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/5">
+            <div className="p-3.5 rounded-xl bg-[#081b11] border border-emerald-500/15">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-slate-400">Rain Window (48h)</span>
                 <CloudRain className="w-4 h-4 text-indigo-400" />
@@ -334,7 +382,7 @@ export default function FarmerHome() {
 
         {/* ── My Crop Reports History ── */}
         <section>
-          <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/10">
+          <div className="flex items-center justify-between mb-6 pb-3 border-b border-emerald-500/20">
             <div className="flex items-center gap-2">
               <History className="w-5 h-5 text-emerald-400" />
               <div>
@@ -344,7 +392,7 @@ export default function FarmerHome() {
             </div>
             <button
               onClick={() => navigate('/reports/new')}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-500/30 hover:bg-emerald-900/80 transition-all"
             >
               <Camera className="w-3.5 h-3.5" />
               <span>New Scan</span>
@@ -364,8 +412,8 @@ export default function FarmerHome() {
           )}
 
           {!loading && !error && reports.length === 0 && (
-            <div className="glass rounded-2xl p-8 text-center border border-white/10">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-2xl mb-3">
+            <div className="glass-elevated rounded-2xl p-8 text-center border border-emerald-500/25">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-2xl mb-3">
                 🌱
               </div>
               <h3 className="text-base font-bold text-white mb-1">No Field Scans Yet</h3>

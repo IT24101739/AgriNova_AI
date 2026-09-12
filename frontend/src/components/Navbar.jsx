@@ -58,7 +58,7 @@ export default function Navbar() {
   const isLoginPage = location.pathname === '/' && !user;
 
   return (
-    <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-[#080d1a]/90 border-b border-white/10 transition-all duration-300">
+    <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-[#05130b]/92 border-b border-emerald-500/20 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
@@ -293,7 +293,7 @@ export default function Navbar() {
 
       {/* ── Mobile Navigation Drawer ── */}
       {mobileMenuOpen && user && (
-        <div className="md:hidden border-t border-white/10 bg-[#080d1a]/95 backdrop-blur-2xl px-4 py-4 space-y-2 animate-fade-in">
+        <div className="md:hidden border-t border-emerald-500/20 bg-[#05130b]/95 backdrop-blur-2xl px-4 py-4 space-y-2 animate-fade-in">
           
           <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 mb-3">
             <div className="flex items-center gap-2.5">

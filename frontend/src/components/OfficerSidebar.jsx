@@ -29,7 +29,7 @@ export default function OfficerSidebar({ onLogout }) {
 
   return (
     <aside className="fixed left-0 top-16 h-[calc(100vh-4rem)] w-60 flex flex-col z-40
-                      bg-[#080d1a]/95 backdrop-blur-xl border-r border-white/10">
+                      bg-[#06140d]/95 backdrop-blur-xl border-r border-emerald-500/20">
       {/* Officer Header */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-white/5">
         <div className="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">

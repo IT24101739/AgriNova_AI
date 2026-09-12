@@ -31,7 +31,7 @@ import AIFeedbackPage from './pages/AIFeedbackPage';
 /** Officer layout – sidebar + main content area with seamless header integration */
 function OfficerLayout() {
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] bg-[#080d1a]">
+    <div className="flex min-h-[calc(100vh-4rem)] bg-[#05130b]">
       <OfficerSidebar />
       <main className="ml-60 flex-1 p-6 md:p-8 overflow-y-auto min-h-[calc(100vh-4rem)]">
         <Outlet />
@@ -43,7 +43,7 @@ function OfficerLayout() {
 export default function App() {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-[#080d1a] text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+      <div className="min-h-screen bg-[#05130b] text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
         {/* Global persistent unified Navbar */}
         <Navbar />
 
