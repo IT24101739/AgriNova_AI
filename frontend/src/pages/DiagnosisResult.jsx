@@ -18,13 +18,20 @@ import SeverityBadge from "../components/SeverityBadge";
 import SpreadRiskBadge from "../components/SpreadRiskBadge";
 import TreatmentSteps from "../components/TreatmentSteps";
 import WeatherEvidence from "../components/WeatherEvidence";
-import { ShieldCheck, CheckCircle2, Loader2 } from "lucide-react";
-import { API_BASE } from "../config/api";
+import {
+  UserCheck,
+  ShieldAlert,
+  Loader2,
+  CheckCircle2,
+  Send,
+  AlertCircle,
+} from "lucide-react";
 import {
   getAdviceInLanguage,
   triggerCompleteAnalysis,
   getWeatherRisk,
 } from "../services/analysisService";
+import { createTicket, getTickets } from "../services/officerApi";
 
 // ── Language config ───────────────────────────────────────────────────────────
 const LANGUAGES = [
@@ -73,15 +80,85 @@ const DiagnosisResult = () => {
   const [language, setLanguage] = useState(
     () => localStorage.getItem("preferred_language") || "en"
   );
-  const [requestingOfficer, setRequestingOfficer] = useState(false);
-  const [officerTicketCreated, setOfficerTicketCreated] = useState(() => {
-    return Boolean(localStorage.getItem(`officer_requested_${reportId}`));
+
+  // ── Officer Ticket Request State ──
+  const [ticketState, setTicketState] = useState({
+    requested: false,
+    ticketId: null,
+    loading: false,
+    error: null,
+    successMsg: null,
   });
-  const [officerTicketId, setOfficerTicketId] = useState(() => {
-    const saved = localStorage.getItem(`officer_requested_${reportId}`);
-    return saved && saved !== "true" ? saved : null;
-  });
-  const [officerError, setOfficerError] = useState("");
+  const [officerNote, setOfficerNote] = useState("");
+  const [showNoteInput, setShowNoteInput] = useState(false);
+
+  // Check if an officer ticket is already active for this report
+  useEffect(() => {
+    if (!reportId) return;
+    const checkExistingTicket = async () => {
+      try {
+        const res = await getTickets({ limit: 100 });
+        const list = res?.data || [];
+        const found = list.find((t) => t.report_id === reportId);
+        if (found) {
+          setTicketState({
+            requested: true,
+            ticketId: found.id,
+            loading: false,
+            error: null,
+            successMsg: null,
+          });
+        } else if (data?.decision === "OFFICER_REVIEW" || data?.decision === "OUTBREAK_WARNING") {
+          setTicketState((prev) => ({ ...prev, requested: true }));
+        }
+      } catch {
+        if (data?.decision === "OFFICER_REVIEW" || data?.decision === "OUTBREAK_WARNING") {
+          setTicketState((prev) => ({ ...prev, requested: true }));
+        }
+      }
+    };
+    checkExistingTicket();
+  }, [reportId, data?.decision]);
+
+  // Request Officer Ticket Action
+  const handleRequestOfficerTicket = async () => {
+    if (!reportId || ticketState.loading || ticketState.requested) return;
+    setTicketState((prev) => ({ ...prev, loading: true, error: null, successMsg: null }));
+    try {
+      const priority =
+        data?.severity === "HIGH" || data?.severity === "CRITICAL" ? "HIGH" : "MEDIUM";
+      const cropName = data?.crop || data?.diagnosis?.crop || "crop";
+      const diseaseName = data?.diagnosis?.disease || "diagnosed pathogen";
+
+      const defaultReason = `Farmer requested in-person agriculture officer consultation for ${cropName} (${diseaseName}).`;
+      const finalReason = officerNote.trim()
+        ? `${defaultReason} Farmer Note: "${officerNote.trim()}"`
+        : defaultReason;
+
+      const res = await createTicket({
+        report_id: reportId,
+        reason: finalReason,
+        priority: priority,
+      });
+
+      const ticketId = res?.data?.id || res?.id;
+      setTicketState({
+        requested: true,
+        ticketId: ticketId,
+        loading: false,
+        error: null,
+        successMsg: "Officer review ticket created! A local extension officer has been notified.",
+      });
+      setShowNoteInput(false);
+    } catch (err) {
+      console.error("Failed to request officer review:", err);
+      setTicketState((prev) => ({
+        ...prev,
+        loading: false,
+        error: err?.message || "Failed to create officer ticket. Please try again.",
+      }));
+    }
+  };
 
   // ── Fetch full analysis ─────────────────────────────────────────────────────
   const fetchAnalysis = useCallback(async () => {
@@ -122,59 +199,12 @@ const DiagnosisResult = () => {
         localStorage.setItem("preferred_language", resolvedLang);
       }
       setAdvice(result.farmer_advice);
-
-      // Check if ticket already exists for this report in Supabase
-      try {
-        const tRes = await fetch(`${API_BASE}/api/officer/tickets`);
-        if (tRes.ok) {
-          const tJson = await tRes.json();
-          const existingT = tJson.data?.find((t) => t.report_id === reportId);
-          if (existingT) {
-            setOfficerTicketCreated(true);
-            setOfficerTicketId(existingT.id);
-            localStorage.setItem(`officer_requested_${reportId}`, existingT.id);
-          }
-        }
-      } catch (tErr) {
-        // Silent fallback to local storage
-      }
     } catch (err) {
       setError(err.message || "Failed to load diagnosis. Please try again.");
     } finally {
       setLoading(false);
     }
   }, [reportId, language]);
-
-  const handleRequestOfficer = async () => {
-    setRequestingOfficer(true);
-    setOfficerError("");
-    try {
-      const diseaseName = data?.diagnosis?.disease || "Unidentified Crop Issue";
-      const cropName = data?.diagnosis?.crop || "Crop";
-      const res = await fetch(`${API_BASE}/api/officer/tickets`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          report_id: reportId,
-          reason: `Farmer requested officer field review for ${cropName} (${diseaseName})`,
-          priority: "HIGH",
-        }),
-      });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        setOfficerTicketCreated(true);
-        setOfficerTicketId(json.data?.id);
-        localStorage.setItem(`officer_requested_${reportId}`, json.data?.id || "true");
-      } else {
-        throw new Error(json.detail || json.message || "Failed to dispatch ticket to officer");
-      }
-    } catch (err) {
-      console.error("Officer request failed:", err);
-      setOfficerError(err.message || "Could not connect to officer service. Please try again.");
-    } finally {
-      setRequestingOfficer(false);
-    }
-  };
 
   useEffect(() => {
     fetchAnalysis();
@@ -304,7 +334,9 @@ const DiagnosisResult = () => {
               supportsDisease={data.weather?.supports_prediction}
             />
 
-            {/* 6. Decision-specific content & Farmer Escalation to Officer */}
+            {/* 6. Decision-specific content */}
+            {data.decision === "OFFICER_REVIEW" && <OfficerReviewBanner />}
+
             {data.needs_additional_photo && (
               <AdditionalPhotoRequest
                 reportId={reportId}
@@ -313,99 +345,111 @@ const DiagnosisResult = () => {
               />
             )}
 
-            {/* ── Request Agriculture Officer Action Card ── */}
-            <div className={`p-5 rounded-2xl border transition-all duration-300 ${
-              officerTicketCreated || data.decision === "OFFICER_REVIEW"
-                ? "bg-blue-950/40 border-blue-500/40 shadow-lg shadow-blue-950/50"
-                : (data.decision === "NEED_MORE_INFO" || (data.diagnosis?.confidence && data.diagnosis.confidence < 0.75))
-                ? "bg-gradient-to-br from-amber-950/50 via-slate-900 to-slate-900 border-amber-500/40 shadow-lg shadow-amber-950/30"
-                : "bg-slate-900/80 border-white/10"
-            }`}>
-              <div className="flex items-start gap-3.5">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-xl ${
-                  officerTicketCreated || data.decision === "OFFICER_REVIEW"
-                    ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                    : (data.decision === "NEED_MORE_INFO" || (data.diagnosis?.confidence && data.diagnosis.confidence < 0.75))
-                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                    : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                }`}>
-                  {officerTicketCreated || data.decision === "OFFICER_REVIEW" ? "👨‍🌾" : "🛡️"}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <h3 className="text-sm font-bold text-white">
-                      {officerTicketCreated || data.decision === "OFFICER_REVIEW"
-                        ? "Agriculture Officer Review Assigned"
-                        : (data.decision === "NEED_MORE_INFO" || (data.diagnosis?.confidence && data.diagnosis.confidence < 0.75))
-                        ? "AI Uncertain? Request Field Officer Review"
-                        : "Need an Expert Agriculture Officer Inspection?"}
-                    </h3>
-                    {(officerTicketCreated || data.decision === "OFFICER_REVIEW") && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                        TICKET OPEN
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-slate-300 leading-relaxed mb-3">
-                    {officerTicketCreated || data.decision === "OFFICER_REVIEW"
-                      ? "Your case has been forwarded to the Agriculture Officer Command. An extension officer will review your leaf scan and schedule a field visit if necessary."
-                      : (data.decision === "NEED_MORE_INFO" || (data.diagnosis?.confidence && data.diagnosis.confidence < 0.75))
-                      ? "The AI model could not diagnose this symptom with high confidence. Click below to immediately dispatch this report to your local agriculture extension officer."
-                      : "If the symptoms don't match or you need an in-person field visit from extension services, you can request an official assessment."}
-                  </p>
-
-                  {officerError && (
-                    <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg p-2 mb-3">
-                      {officerError}
-                    </p>
-                  )}
-
-                  {officerTicketCreated || data.decision === "OFFICER_REVIEW" ? (
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold text-blue-300 bg-blue-500/10 border border-blue-500/25">
-                      <CheckCircle2 className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                      <span>Case Ticket Dispatched to Regional Officer</span>
-                      {officerTicketId && (
-                        <span className="font-mono text-[10px] text-blue-400 bg-blue-500/15 px-1.5 py-0.5 rounded">
-                          #{officerTicketId.slice(0, 8)}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleRequestOfficer}
-                      disabled={requestingOfficer}
-                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-lg transition-all duration-200 active:scale-95 cursor-pointer ${
-                        (data.decision === "NEED_MORE_INFO" || (data.diagnosis?.confidence && data.diagnosis.confidence < 0.75))
-                          ? "bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 shadow-amber-500/20"
-                          : "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-blue-500/20"
-                      }`}
-                    >
-                      {requestingOfficer ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Dispatching to Officer...</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShieldCheck className="w-4 h-4" />
-                          <span>Request Agriculture Officer Review</span>
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
             {/* 7. Treatment steps (always displayed when advice is available) */}
             {advice && (
               <TreatmentSteps advice={advice} isLoading={langLoading} />
             )}
 
-            {/* 8. Language switcher reminder */}
+            {/* 8. Officer Review Request Action Card */}
+            <div className="rounded-2xl p-5 bg-gradient-to-r from-blue-950/40 via-slate-900/60 to-blue-950/30 border border-blue-500/25 shadow-xl transition-all">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center flex-shrink-0 text-blue-400">
+                    <ShieldAlert className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                      <span>Request Agriculture Officer Review</span>
+                      {ticketState.requested && (
+                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          Active Ticket
+                        </span>
+                      )}
+                    </h4>
+                    <p className="text-xs text-slate-300 mt-1 max-w-lg leading-relaxed">
+                      {ticketState.requested
+                        ? "An Officer Ticket is active for this scan. The regional extension officer will review your case, schedule an inspection, or send samples for lab PCR verification."
+                        : "Need an in-person farm inspection, chemical guidance, or official disease certification? Request an agriculture officer ticket directly."}
+                    </p>
+                    {ticketState.error && (
+                      <p className="text-xs text-red-400 mt-2 font-medium">{ticketState.error}</p>
+                    )}
+                    {ticketState.successMsg && (
+                      <p className="text-xs text-emerald-400 mt-2 font-medium flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>{ticketState.successMsg}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {ticketState.requested ? (
+                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 text-xs font-semibold whitespace-nowrap shadow-sm">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span>Officer Ticket Active</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    {!showNoteInput && (
+                      <button
+                        type="button"
+                        onClick={() => setShowNoteInput(true)}
+                        className="text-[11px] text-slate-400 hover:text-white px-2.5 py-1.5 rounded-lg border border-white/10 hover:border-white/20 transition-colors"
+                      >
+                        + Add Note
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleRequestOfficerTicket}
+                      disabled={ticketState.loading}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-500/20 active:scale-95 disabled:opacity-50 transition-all duration-200 cursor-pointer"
+                    >
+                      {ticketState.loading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-white" />
+                          <span>Creating Ticket…</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserCheck className="w-4 h-4 text-blue-200" />
+                          <span>Request Officer Ticket</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Optional note input */}
+              {showNoteInput && !ticketState.requested && (
+                <div className="mt-3 pt-3 border-t border-white/10 animate-fade-in">
+                  <label className="block text-[11px] text-slate-400 mb-1 font-medium">
+                    Note for the Agriculture Officer (optional):
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={officerNote}
+                      onChange={(e) => setOfficerNote(e.target.value)}
+                      placeholder="e.g. Field located near irrigation canal, rapid leaf curling noticed yesterday..."
+                      className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRequestOfficerTicket}
+                      disabled={ticketState.loading}
+                      className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1"
+                    >
+                      <Send className="w-3 h-3" />
+                      <span>Submit</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 9. Language switcher reminder */}
             {data.farmer_advice && (
               <p className="text-center text-slate-500 text-xs">
                 Treatment advice available in{" "}
