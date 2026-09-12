@@ -124,18 +124,68 @@ CREATE TABLE IF NOT EXISTS ai_feedback (
 );
 
 -- ============================================================
--- USERS (Supabase Auth manages auth.users — this extends it)
+-- USERS / PROFILES (Supabase Auth sync)
 -- ============================================================
-CREATE TABLE IF NOT EXISTS users (
-    id                 UUID PRIMARY KEY,  -- matches auth.users.id
+CREATE TABLE IF NOT EXISTS public.users (
+    id                 UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email              VARCHAR(255) UNIQUE,
     name               VARCHAR(200),
-    role               VARCHAR(50) DEFAULT 'farmer',
-    preferred_language VARCHAR(5)  DEFAULT 'en'
+    role               VARCHAR(50) NOT NULL DEFAULT 'farmer', -- 'farmer' | 'officer'
+    district           VARCHAR(100),
+    phone              VARCHAR(50),
+    badge              VARCHAR(100),
+    preferred_language VARCHAR(5) DEFAULT 'en',
+    created_at         TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role  ON public.users(role);
+
+-- Automatic trigger: When a user signs up in auth.users, copy metadata to public.users
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.users (id, email, name, role, district, phone, badge, preferred_language)
+    VALUES (
+        NEW.id,
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
+        COALESCE(NEW.raw_user_meta_data->>'role', 'farmer'),
+        NEW.raw_user_meta_data->>'district',
+        NEW.raw_user_meta_data->>'phone',
+        NEW.raw_user_meta_data->>'badge',
+        COALESCE(NEW.raw_user_meta_data->>'preferred_language', 'en')
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        email = EXCLUDED.email,
+        name = EXCLUDED.name,
+        role = EXCLUDED.role,
+        district = EXCLUDED.district,
+        phone = EXCLUDED.phone,
+        badge = EXCLUDED.badge,
+        preferred_language = EXCLUDED.preferred_language;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT OR UPDATE ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
 -- ============================================================
--- Storage bucket (run separately in Supabase dashboard or CLI)
--- INSERT INTO storage.buckets (id, name, public)
--- VALUES ('crop-images', 'crop-images', true)
--- ON CONFLICT DO NOTHING;
+-- STORAGE BUCKET
 -- ============================================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('crop-images', 'crop-images', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Allow public read access to crop-images
+CREATE POLICY IF NOT EXISTS "Public Access"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'crop-images');
+
+-- Allow authenticated and anon uploads to crop-images
+CREATE POLICY IF NOT EXISTS "Allow Uploads"
+    ON storage.objects FOR INSERT
+    WITH CHECK (bucket_id = 'crop-images');

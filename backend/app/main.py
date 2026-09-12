@@ -22,6 +22,7 @@ from app.routers import reports
 from app.routers.analysis import router as analysis_router
 from app.routers.weather import router as weather_router
 from app.routers.additional_image import router as additional_image_router
+from app.routers.auth import router as auth_router
 from app.routers import officer, shared
 from app.ai.disease_classifier import get_classifier
 
@@ -76,6 +77,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Authentication & Profiles ─────────────────────────────────────────────────
+app.include_router(auth_router)
 
 # ── Feature Slice 1 (Member 1) ────────────────────────────────────────────────
 app.include_router(reports.router)

@@ -133,6 +133,23 @@ class AnalysisResult(Base):
     weather_risk = Column(String(20), nullable=True)
     outbreak_risk = Column(String(20), nullable=True)
     final_confidence = Column(Float, nullable=True)
-    spread_risk = Column(String(20), nullable=True)
-
     report = relationship("Report", back_populates="analysis_result")
+
+
+# ---------------------------------------------------------------------------
+# User / Profile
+# ---------------------------------------------------------------------------
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(UUIDType, primary_key=True, default=uuid.uuid4)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    name = Column(String(200), nullable=True)
+    role = Column(String(50), nullable=False, default="farmer")
+    district = Column(String(100), nullable=True)
+    phone = Column(String(50), nullable=True)
+    badge = Column(String(100), nullable=True)
+    preferred_language = Column(String(5), nullable=False, default="en")
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+

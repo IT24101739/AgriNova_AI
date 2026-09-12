@@ -6,28 +6,55 @@ import {
   Shield,
   Lock,
   Mail,
+  User as UserIcon,
+  Phone,
+  MapPin,
+  BadgeCheck,
   ArrowRight,
   Eye,
   EyeOff,
   Sparkles,
   AlertCircle,
   Sun,
-  CloudRain,
-  CheckCircle2
+  CheckCircle2,
+  UserPlus,
+  LogIn
 } from 'lucide-react';
+
+const SRI_LANKA_DISTRICTS = [
+  'Ampara', 'Anuradhapura', 'Badulla', 'Batticaloa', 'Colombo',
+  'Galle', 'Gampaha', 'Hambantota', 'Jaffna', 'Kalutara',
+  'Kandy', 'Kegalle', 'Kilinochchi', 'Kurunegala', 'Mannar',
+  'Matale', 'Matara', 'Monaragala', 'Mullaitivu', 'Nuwara Eliya',
+  'Polonnaruwa', 'Puttalam', 'Ratnapura', 'Trincomalee', 'Vavuniya'
+];
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, login, logout, demoAccounts } = useAuth();
+  const { user, login, signup, logout, demoAccounts } = useAuth();
+
+  // Mode: 'signin' or 'signup'
+  const [authMode, setAuthMode] = useState('signin');
 
   const initialRole = searchParams.get('role') === 'officer' ? 'officer' : 'farmer';
   const [selectedRole, setSelectedRole] = useState(initialRole);
 
+  // Common fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Sign up specific fields
+  const [name, setName] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [district, setDistrict] = useState('Gampaha');
+  const [phone, setPhone] = useState('');
+  const [badge, setBadge] = useState('');
+  const [preferredLanguage, setPreferredLanguage] = useState('en');
+
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   // Always show the login portal on root visit — reset previous session
@@ -35,22 +62,27 @@ export default function LoginPage() {
     logout();
   }, []);
 
-  // When switching role tab, pre-fill credentials
+  // When switching role tab in signin, pre-fill demo credentials
   const handleRoleChange = (role) => {
     setSelectedRole(role);
     setError('');
-    if (role === 'farmer') {
-      setEmail(demoAccounts.FARMER.email);
-      setPassword(demoAccounts.FARMER.password);
-    } else {
-      setEmail(demoAccounts.OFFICER.email);
-      setPassword(demoAccounts.OFFICER.password);
+    setSuccessMsg('');
+    if (authMode === 'signin') {
+      if (role === 'farmer') {
+        setEmail(demoAccounts.FARMER.email);
+        setPassword(demoAccounts.FARMER.password);
+      } else {
+        setEmail(demoAccounts.OFFICER.email);
+        setPassword(demoAccounts.OFFICER.password);
+      }
     }
   };
 
   const handleQuickFill = (role) => {
+    setAuthMode('signin');
     setSelectedRole(role);
     setError('');
+    setSuccessMsg('');
     if (role === 'farmer') {
       setEmail(demoAccounts.FARMER.email);
       setPassword(demoAccounts.FARMER.password);
@@ -60,13 +92,14 @@ export default function LoginPage() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSignIn = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
     setIsLoading(true);
 
-    setTimeout(() => {
-      const result = login(email, password);
+    try {
+      const result = await login(email, password);
       setIsLoading(false);
 
       if (result.success) {
@@ -74,7 +107,59 @@ export default function LoginPage() {
       } else {
         setError(result.error);
       }
-    }, 400);
+    } catch (err) {
+      setIsLoading(false);
+      setError(err.message || 'Login failed.');
+    }
+  };
+
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+
+    if (!name.trim()) {
+      setError('Please enter your full name.');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const signupPayload = {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+        role: selectedRole,
+        district,
+        phone: phone.trim() || null,
+        badge: selectedRole === 'officer' ? (badge.trim() || 'AO-REG-2026') : null,
+        preferred_language: preferredLanguage,
+      };
+
+      const result = await signup(signupPayload);
+      setIsLoading(false);
+
+      if (result.success) {
+        setSuccessMsg(result.message || 'Account created successfully! Redirecting...');
+        setTimeout(() => {
+          navigate(result.redirectTo, { replace: true });
+        }, 1000);
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      setIsLoading(false);
+      setError(err.message || 'Registration failed. Please try again.');
+    }
   };
 
   return (
@@ -127,7 +212,7 @@ export default function LoginPage() {
                 </span>
                 <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-900/70 backdrop-blur-md border border-emerald-500/40 font-semibold text-emerald-300">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  Surveillance Active
+                  Connected to Supabase
                 </span>
               </div>
             </div>
@@ -156,70 +241,98 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* ── Right Column: Interactive Login Form & Demo Cards ── */}
+          {/* ── Right Column: Interactive Login & Sign Up Form ── */}
           <div className="lg:col-span-6 space-y-4">
             
-            {/* ── Demo Credentials Callout (Pinned for Quick Testing) ── */}
-            <div className="glass-elevated rounded-2xl p-4 border border-emerald-500/25 shadow-xl space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                  Select Demo Account to Test:
-                </span>
-                <span className="text-[10px] text-emerald-400 uppercase tracking-wider font-mono font-bold">1-Click Auto Fill</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {/* Farmer Demo Pill */}
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('farmer')}
-                  className={`p-3 rounded-xl border text-left transition-all ${
-                    selectedRole === 'farmer'
-                      ? 'bg-emerald-500/20 border-emerald-500/50 ring-1 ring-emerald-500/40 shadow-lg shadow-emerald-500/10'
-                      : 'bg-white/5 border-white/5 hover:border-emerald-500/30'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-emerald-300 flex items-center gap-1">
-                      🌾 Farmer
-                    </span>
-                    <span className="text-[9px] px-2 py-0.5 rounded-md bg-emerald-500/25 text-emerald-200 font-bold">
-                      Auto Fill
-                    </span>
-                  </div>
-                  <p className="text-[11px] font-mono text-slate-200 truncate">farmer@gmail.com</p>
-                  <p className="text-[10px] font-mono text-emerald-400 font-semibold">farmer123</p>
-                </button>
-
-                {/* Officer Demo Pill */}
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('officer')}
-                  className={`p-3 rounded-xl border text-left transition-all ${
-                    selectedRole === 'officer'
-                      ? 'bg-blue-500/20 border-blue-500/50 ring-1 ring-blue-500/40 shadow-lg shadow-blue-500/10'
-                      : 'bg-white/5 border-white/5 hover:border-blue-500/30'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-blue-300 flex items-center gap-1">
-                      🛡️ Officer
-                    </span>
-                    <span className="text-[9px] px-2 py-0.5 rounded-md bg-blue-500/25 text-blue-200 font-bold">
-                      Auto Fill
-                    </span>
-                  </div>
-                  <p className="text-[11px] font-mono text-slate-200 truncate">officer@gmail.com</p>
-                  <p className="text-[10px] font-mono text-blue-400 font-semibold">officer123</p>
-                </button>
-              </div>
+            {/* ── Mode Switcher: Sign In vs Sign Up ── */}
+            <div className="flex rounded-2xl bg-black/50 p-1.5 border border-emerald-500/20 shadow-lg">
+              <button
+                type="button"
+                onClick={() => { setAuthMode('signin'); setError(''); setSuccessMsg(''); }}
+                className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+                  authMode === 'signin'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Sign In</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAuthMode('signup'); setError(''); setSuccessMsg(''); }}
+                className={`flex-1 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+                  authMode === 'signup'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Create Account (Sign Up)</span>
+              </button>
             </div>
+
+            {/* ── Demo Credentials Callout (Only in Sign In Mode) ── */}
+            {authMode === 'signin' && (
+              <div className="glass-elevated rounded-2xl p-4 border border-emerald-500/25 shadow-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    Quick Test Demo Accounts:
+                  </span>
+                  <span className="text-[10px] text-emerald-400 uppercase tracking-wider font-mono font-bold">1-Click Fill</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickFill('farmer')}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      selectedRole === 'farmer'
+                        ? 'bg-emerald-500/20 border-emerald-500/50 ring-1 ring-emerald-500/40 shadow-lg shadow-emerald-500/10'
+                        : 'bg-white/5 border-white/5 hover:border-emerald-500/30'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-emerald-300 flex items-center gap-1">
+                        🌾 Farmer
+                      </span>
+                      <span className="text-[9px] px-2 py-0.5 rounded-md bg-emerald-500/25 text-emerald-200 font-bold">
+                        Auto Fill
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-mono text-slate-200 truncate">farmer@gmail.com</p>
+                    <p className="text-[10px] font-mono text-emerald-400 font-semibold">farmer123</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickFill('officer')}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      selectedRole === 'officer'
+                        ? 'bg-blue-500/20 border-blue-500/50 ring-1 ring-blue-500/40 shadow-lg shadow-blue-500/10'
+                        : 'bg-white/5 border-white/5 hover:border-blue-500/30'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-bold text-blue-300 flex items-center gap-1">
+                        🛡️ Officer
+                      </span>
+                      <span className="text-[9px] px-2 py-0.5 rounded-md bg-blue-500/25 text-blue-200 font-bold">
+                        Auto Fill
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-mono text-slate-200 truncate">officer@gmail.com</p>
+                    <p className="text-[10px] font-mono text-blue-400 font-semibold">officer123</p>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* ── Main Form Card ── */}
             <div className="glass-elevated rounded-2xl p-6 sm:p-7 border border-emerald-500/25 shadow-2xl space-y-5">
               
-              {/* Portal Selector Tabs */}
+              {/* Role Selector Tabs */}
               <div className="grid grid-cols-2 p-1 rounded-xl bg-black/40 border border-emerald-500/20 text-xs font-semibold">
                 <button
                   type="button"
@@ -231,7 +344,7 @@ export default function LoginPage() {
                   }`}
                 >
                   <span>🌾</span>
-                  <span>Farmer Portal</span>
+                  <span>{authMode === 'signup' ? 'I am a Farmer' : 'Farmer Portal'}</span>
                 </button>
                 <button
                   type="button"
@@ -243,91 +356,295 @@ export default function LoginPage() {
                   }`}
                 >
                   <span>🛡️</span>
-                  <span>Officer Portal</span>
+                  <span>{authMode === 'signup' ? 'I am an Officer' : 'Officer Portal'}</span>
                 </button>
               </div>
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {error && (
-                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs animate-fade-in">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <span>{error}</span>
-                  </div>
-                )}
-
-                {/* Email Field */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                      <Mail className="w-4 h-4 text-emerald-400" />
-                    </div>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder={selectedRole === 'farmer' ? 'farmer@gmail.com' : 'officer@gmail.com'}
-                      className="w-full bg-[#081b11] border border-emerald-500/25 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all font-mono"
-                    />
-                  </div>
+              {/* Feedback messages */}
+              {error && (
+                <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs animate-fade-in">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>{error}</span>
                 </div>
+              )}
 
-                {/* Password Field */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                      <Lock className="w-4 h-4 text-emerald-400" />
-                    </div>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full bg-[#081b11] border border-emerald-500/25 rounded-xl py-2.5 pl-10 pr-10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all font-mono"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
+              {successMsg && (
+                <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs animate-fade-in">
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5 text-emerald-400" />
+                  <span>{successMsg}</span>
                 </div>
+              )}
 
-                {/* Submit CTA */}
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className={`w-full py-3.5 rounded-xl font-bold text-xs tracking-wide text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-xl active:scale-[0.99] ${
-                    selectedRole === 'farmer'
-                      ? 'bg-gradient-to-r from-emerald-600 via-green-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 shadow-emerald-500/25'
-                      : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 shadow-blue-500/25'
-                  }`}
-                >
-                  {isLoading ? (
-                    <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  ) : (
-                    <>
-                      <span>Enter {selectedRole === 'farmer' ? 'Farmer Portal' : 'Officer Command Center'}</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
+              {/* ── Sign In Form ── */}
+              {authMode === 'signin' ? (
+                <form onSubmit={handleSignIn} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <Mail className="w-4 h-4 text-emerald-400" />
+                      </div>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder={selectedRole === 'farmer' ? 'farmer@gmail.com' : 'officer@gmail.com'}
+                        className="w-full bg-[#081b11] border border-emerald-500/25 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <Lock className="w-4 h-4 text-emerald-400" />
+                      </div>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full bg-[#081b11] border border-emerald-500/25 rounded-xl py-2.5 pl-10 pr-10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className={`w-full py-3.5 rounded-xl font-bold text-xs tracking-wide text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-xl active:scale-[0.99] ${
+                      selectedRole === 'farmer'
+                        ? 'bg-gradient-to-r from-emerald-600 via-green-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 shadow-emerald-500/25'
+                        : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 shadow-blue-500/25'
+                    }`}
+                  >
+                    {isLoading ? (
+                      <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    ) : (
+                      <>
+                        <span>Enter {selectedRole === 'farmer' ? 'Farmer Portal' : 'Officer Command Center'}</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                /* ── Sign Up Form ── */
+                <form onSubmit={handleSignUp} className="space-y-3.5">
+                  {/* Full Name */}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                      Full Name
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <UserIcon className="w-3.5 h-3.5 text-emerald-400" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="E.g., Sunil Bandara"
+                        className="w-full bg-[#081b11] border border-emerald-500/25 rounded-xl py-2 pl-9 pr-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                        <Mail className="w-3.5 h-3.5 text-emerald-400" />
+                      </div>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="yourname@gmail.com"
+                        className="w-full bg-[#081b11] border border-emerald-500/25 rounded-xl py-2 pl-9 pr-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  {/* District & Phone row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                        District
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                          <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                        </div>
+                        <select
+                          value={district}
+                          onChange={(e) => setDistrict(e.target.value)}
+                          className="w-full bg-[#081b11] border border-emerald-500/25 rounded-xl py-2 pl-9 pr-3 text-xs text-white focus:outline-none focus:border-emerald-400"
+                        >
+                          {SRI_LANKA_DISTRICTS.map((d) => (
+                            <option key={d} value={d} className="bg-[#05130b] text-white">
+                              {d}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                        Phone (Optional)
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                          <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                        </div>
+                        <input
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="077xxxxxxx"
+                          className="w-full bg-[#081b11] border border-emerald-500/25 rounded-xl py-2 pl-9 pr-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Officer Badge ID (if Officer) */}
+                  {selectedRole === 'officer' && (
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-blue-300 mb-1">
+                        Officer Designation / Badge ID
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                          <BadgeCheck className="w-3.5 h-3.5 text-blue-400" />
+                        </div>
+                        <input
+                          type="text"
+                          value={badge}
+                          onChange={(e) => setBadge(e.target.value)}
+                          placeholder="E.g., AO-WP-2026"
+                          className="w-full bg-[#081b11] border border-blue-500/30 rounded-xl py-2 pl-9 pr-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-400 font-mono"
+                        />
+                      </div>
+                    </div>
                   )}
-                </button>
-              </form>
+
+                  {/* Language */}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                      Preferred Advisory Language
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { code: 'en', label: 'English' },
+                        { code: 'si', label: 'සිංහල' },
+                        { code: 'ta', label: 'தமிழ்' },
+                      ].map((l) => (
+                        <button
+                          key={l.code}
+                          type="button"
+                          onClick={() => setPreferredLanguage(l.code)}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all ${
+                            preferredLanguage === l.code
+                              ? 'bg-emerald-500/25 border-emerald-400 text-emerald-200'
+                              : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {l.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Password & Confirm Password */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                        Password (Min 6)
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                          <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                        </div>
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full bg-[#081b11] border border-emerald-500/25 rounded-xl py-2 pl-9 pr-8 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                        Confirm Password
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                          <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                        </div>
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          required
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full bg-[#081b11] border border-emerald-500/25 rounded-xl py-2 pl-9 pr-8 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400 font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Submit CTA */}
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className={`w-full mt-2 py-3 rounded-xl font-bold text-xs tracking-wide text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-xl active:scale-[0.99] ${
+                      selectedRole === 'farmer'
+                        ? 'bg-gradient-to-r from-emerald-600 via-green-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 shadow-emerald-500/25'
+                        : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 shadow-blue-500/25'
+                    }`}
+                  >
+                    {isLoading ? (
+                      <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4" />
+                        <span>Register as {selectedRole === 'farmer' ? 'Farmer' : 'Agriculture Officer'}</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
 
               {/* Portal summary line */}
               <div className="pt-2 border-t border-white/5 text-center">
                 <p className="text-[11px] text-slate-400">
-                  {selectedRole === 'farmer'
+                  {authMode === 'signup'
+                    ? '✨ Real-time Supabase Auth sync. Instant verified access.'
+                    : selectedRole === 'farmer'
                     ? '🌾 Farmer Portal: Upload photos, view AI disease scores & treatment advice.'
                     : '🛡️ Officer Console: Manage district tickets, review evidence & monitor outbreak map.'}
                 </p>
@@ -338,7 +655,7 @@ export default function LoginPage() {
             <div className="text-center pt-2">
               <p className="text-[11px] text-slate-500 flex items-center justify-center gap-1.5">
                 <Lock className="w-3 h-3 text-emerald-400" />
-                <span>Sri Lanka National Agricultural Disease Surveillance System</span>
+                <span>Sri Lanka National Agricultural Disease Surveillance System · Supabase Connected</span>
               </p>
             </div>
           </div>
@@ -349,3 +666,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

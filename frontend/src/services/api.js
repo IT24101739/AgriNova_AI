@@ -11,6 +11,15 @@ const api = axios.create({
   timeout: 60000, // 60s — AI inference can be slow
 });
 
+// Request interceptor — attach auth token if present
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('sb-access-token') || localStorage.getItem('agrinova_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Response interceptor — normalize errors
 api.interceptors.response.use(
   (res) => res,
@@ -19,6 +28,38 @@ api.interceptors.response.use(
     return Promise.reject(new Error(detail));
   }
 );
+
+
+// ------------------------------------------------------------------
+// Authentication
+// ------------------------------------------------------------------
+
+/**
+ * Register a new user in Supabase Auth & AgriNova Database.
+ * @param {Object} userData - { name, email, password, role, district, phone, badge, preferred_language }
+ */
+export async function signupUser(userData) {
+  const res = await api.post('/auth/signup', userData);
+  return res.data;
+}
+
+/**
+ * Sign in user.
+ * @param {string} email
+ * @param {string} password
+ */
+export async function loginUser(email, password) {
+  const res = await api.post('/auth/login', { email, password });
+  return res.data;
+}
+
+/**
+ * Fetch current authenticated user.
+ */
+export async function getCurrentUser() {
+  const res = await api.get('/auth/me');
+  return res.data;
+}
 
 
 // ------------------------------------------------------------------
