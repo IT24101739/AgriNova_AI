@@ -1,36 +1,65 @@
-# ── Secrets (NEVER commit these) ──────────────────────────
-backend/.env
-frontend/.env
-
-# ── Python ────────────────────────────────────────────────
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
+# Dependencies
+node_modules/
+*/node_modules/
+venv/
+.venv/
+env/
 backend/venv/
 backend/.venv/
-backend/env/
-*.egg-info/
-dist/
+
+# Environment variables & secrets
+.env
+.env*.local
+backend/.env
+frontend/.env
+!*.example
+
+# Python
+__pycache__/
+*/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
 *.egg
 .pytest_cache/
 
-# ── Node / Frontend ────────────────────────────────────────
-frontend/node_modules/
+# Frontend builds
 frontend/dist/
+frontend/dist-ssr/
 frontend/.vite/
+dist/
 
-# ── OS / Editor ────────────────────────────────────────────
-.DS_Store
-Thumbs.db
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# ── Logs ──────────────────────────────────────────────────
+# Logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
