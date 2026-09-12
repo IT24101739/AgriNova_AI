@@ -36,20 +36,21 @@ LANGUAGE_NAMES: Dict[str, str] = {
 # ── System prompt ─────────────────────────────────────────────────────────────
 
 _SYSTEM = """\
-You are a friendly agricultural advisor helping farmers in Sri Lanka understand a crop disease diagnosis.
+You are a knowledgeable agricultural advisor helping farmers in Sri Lanka understand a crop disease diagnosis and take immediate protective action.
 
 YOUR TASK
-Rewrite the treatment steps below in simple, warm language that a farmer with no technical background can understand.
+Provide simple, warm, practical treatment and cultural steps that a farmer can easily understand and apply immediately.
 
 HARD RULES – You MUST follow these exactly:
-1. Use ONLY the treatment steps listed under "Approved steps". Do NOT add new treatments, pesticides, or chemicals.
-2. Do NOT include any scientific or medical jargon.
-3. Write in {language_name}. Keep each step under 30 words.
-4. Respond with VALID JSON only — no markdown fences, no preamble, no trailing text.
-5. The JSON must contain exactly these three keys:
-   - "diagnosis_text":  2–3 sentences explaining what the disease is and why it matters to the farmer.
-   - "treatment_steps": array of strings — each approved step rewritten in plain farmer language.
-   - "warning":         one sentence warning IF severity is HIGH or outbreak risk is HIGH; otherwise null.
+1. Base the recommendations on the approved steps below. Adapt the instructions sensibly to the specific crop, lesion severity, and local weather context (e.g. if humidity is high or rain is approaching, emphasize keeping leaves dry and ensuring drainage; if severity is high, emphasize rapid isolation of diseased tissue).
+2. Do NOT recommend dangerous unapproved synthetic chemicals or toxic pesticides. Focus on safe cultural sanitation, leaf trimming, airflow spacing, soil drainage, and organic care.
+3. Do NOT include confusing scientific or medical jargon.
+4. Write in {language_name}. Keep each step actionable, clear, and under 30 words.
+5. Respond with VALID JSON only — no markdown fences, no preamble, no trailing text.
+6. The JSON must contain exactly these three keys:
+   - "diagnosis_text":  2–3 sentences explaining what the disease is, how it affects this crop, and why it matters to the farmer.
+   - "treatment_steps": array of 4-6 strings — practical, sequential steps the farmer should take immediately to treat and protect their crop.
+   - "warning":         one sentence warning IF severity is HIGH, outbreak risk is HIGH, or weather strongly promotes disease spread; otherwise null.
 
 APPROVED STEPS FOR THIS DISEASE:
 {approved_steps}
@@ -149,6 +150,7 @@ async def generate_treatment_advice(
     outbreak_risk: str,
     weather_summary: str,
     language: str = "en",
+    crop: str = "",
 ) -> Dict[str, Any]:
     """
     Generate localized, farmer-friendly treatment advice.
@@ -160,6 +162,7 @@ async def generate_treatment_advice(
         outbreak_risk:   LOW | MEDIUM | HIGH
         weather_summary: Short human-readable weather context string.
         language:        "en" | "si" | "ta"
+        crop:            Crop name (e.g. "Tomato", "Potato", "Rice", "Chili", etc.)
 
     Returns:
         {
@@ -171,10 +174,11 @@ async def generate_treatment_advice(
     """
     # If leaf is diagnosed as healthy
     if "healthy" in disease.lower():
+        crop_label = crop or "crop"
         if language == "si":
             return {
                 "language": "si",
-                "diagnosis_text": "සුබ ආරංචියක්! ඔබගේ ශාක පත්‍ර නිරෝගීව පවතින අතර, කිසිදු දිලීර හෝ බැක්ටීරියා රෝග ලක්ෂණයක් හඳුනාගෙන නොමැත.",
+                "diagnosis_text": f"සුබ ආරංචියක්! ඔබගේ {crop_label} ශාක පත්‍ර නිරෝගීව පවතින අතර, කිසිදු දිලීර හෝ බැක්ටීරියා රෝග ලක්ෂණයක් හඳුනාගෙන නොමැත.",
                 "treatment_steps": [
                     "ශාකයට අවශ්‍ය ප්‍රමාණයට නිසි ලෙස ජලය සපයන්න, මුල් කුණුවීම වැළැක්වීමට අධික ජලය බැසයාම තහවුරු කරන්න.",
                     "වර්ධන අවධියට ගැළපෙන කාබනික හෝ සමබර NPK පොහොර යොදන්න.",
@@ -185,7 +189,7 @@ async def generate_treatment_advice(
         elif language == "ta":
             return {
                 "language": "ta",
-                "diagnosis_text": "நல்ல செய்தி! உங்கள் பயிர் இலை ஆரோக்கியமாக உள்ளது, பூஞ்சை அல்லது பாக்டீரியா நோய் அறிகுறிகள் எதுவும் தென்படவில்லை.",
+                "diagnosis_text": f"நல்ல செய்தி! உங்கள் {crop_label} பயிர் இலை ஆரோக்கியமாக உள்ளது, பூஞ்சை அல்லது பாக்டீரியா நோய் அறிகுறிகள் எதுவும் தென்படவில்லை.",
                 "treatment_steps": [
                     "வழக்கமான நீர்ப்பாசனத்தைப் பராமரிக்கவும்; வேர் அழுகலைத் தவிர்க்க அதிகப்படியான நீர் தேங்குவதைத் தடுக்கவும்.",
                     "வளர்ச்சி நிலைக்கு ஏற்ப சமச்சீர் கரிம அல்லது NPK உரங்களைப் பயன்படுத்தவும்.",
@@ -196,7 +200,7 @@ async def generate_treatment_advice(
         else:
             return {
                 "language": "en",
-                "diagnosis_text": "Great news! Your plant foliage is completely healthy with no detectable signs of fungal or bacterial disease.",
+                "diagnosis_text": f"Great news! Your {crop_label} plant foliage is completely healthy with no detectable signs of fungal or bacterial disease.",
                 "treatment_steps": [
                     "Maintain standard drip irrigation and ensure good soil drainage to protect root health.",
                     "Continue recommended organic compost or balanced NPK fertilizing according to the crop growth stage.",
@@ -222,13 +226,15 @@ async def generate_treatment_advice(
         escalate_if=escalate_if,
     )
 
+    crop_str = f"Crop:          {crop}\n" if crop else ""
     user_prompt = (
+        f"{crop_str}"
         f"Disease:       {disease}\n"
         f"Severity:      {severity}\n"
         f"Spread Risk:   {spread_risk}\n"
         f"Outbreak Risk: {outbreak_risk}\n"
-        f"Weather:       {weather_summary}\n\n"
-        f"Please write the advice in {language_name}."
+        f"Local Weather: {weather_summary}\n\n"
+        f"Please write practical, weather-conscious treatment advice in {language_name} for this farmer."
     )
 
     try:

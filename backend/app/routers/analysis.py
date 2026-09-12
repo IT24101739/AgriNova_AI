@@ -400,22 +400,21 @@ async def complete_analysis(
         logger.warning("Could not update report status: %s", exc)
 
     # ── 6. Treatment advice (LLM) ─────────────────────────────────────────────
-    farmer_advice = None
-    needs_additional_photo = False
+    # Generate tailored treatment steps for the farmer incorporating crop type,
+    # image pathogen diagnosis, severity level, and local weather conditions.
+    crop_name = aggregation.get("crop") or report.get("crop") or ""
     weather_summary = _fmt_weather(weather)
+    needs_additional_photo = (decision == "NEED_MORE_INFO")
 
-    if decision in ("AUTO_ADVICE", "OUTBREAK_WARNING"):
-        farmer_advice = await generate_treatment_advice(
-            disease=aggregation["final_disease"],
-            severity=severity,
-            spread_risk=spread_risk,
-            outbreak_risk=outbreak["outbreak_risk"],
-            weather_summary=weather_summary,
-            language=preferred_language,
-        )
-
-    elif decision == "NEED_MORE_INFO":
-        needs_additional_photo = True
+    farmer_advice = await generate_treatment_advice(
+        disease=aggregation["final_disease"],
+        severity=severity,
+        spread_risk=spread_risk,
+        outbreak_risk=outbreak["outbreak_risk"],
+        weather_summary=weather_summary,
+        language=preferred_language,
+        crop=crop_name,
+    )
 
     # ── 7. Officer ticket stub ────────────────────────────────────────────────
     if decision in ("OFFICER_REVIEW", "OUTBREAK_WARNING"):
@@ -485,6 +484,7 @@ async def get_advice_in_language(
     severity = report.get("severity", "MODERATE")
     spread_risk = existing.get("spread_risk", "LOW")
     outbreak_risk = existing.get("outbreak_risk", "LOW")
+    crop_name = report.get("crop") or ""
 
     advice = await generate_treatment_advice(
         disease=disease,
@@ -493,5 +493,6 @@ async def get_advice_in_language(
         outbreak_risk=outbreak_risk,
         weather_summary="(weather data not re-fetched for language change)",
         language=language,
+        crop=crop_name,
     )
     return ok(advice, f"Advice in '{language}'.")

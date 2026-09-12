@@ -257,8 +257,8 @@ const DiagnosisResult = () => {
               />
             )}
 
-            {/* 7. Treatment steps (shown for AUTO_ADVICE and OUTBREAK_WARNING) */}
-            {(data.decision === "AUTO_ADVICE" || data.decision === "OUTBREAK_WARNING") && (
+            {/* 7. Treatment steps (always displayed when advice is available) */}
+            {advice && (
               <TreatmentSteps advice={advice} isLoading={langLoading} />
             )}
 
