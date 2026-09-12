@@ -288,14 +288,16 @@ async def complete_analysis(
     This endpoint is idempotent — if analysis already exists it is returned
     without re-running the pipeline.
     """
-    preferred_language = body.preferred_language or "en"
+    # ── 1. Load report + farm first to know preferred language ───────────────
+    report, farm = await _load_report_and_farm(report_id)
+    report_lang = report.get("preferred_language") or "en"
+    preferred_language = body.preferred_language if (body and body.preferred_language) else report_lang
 
     # ── 0. Idempotency check ──────────────────────────────────────────────────
     existing = await _existing_analysis(report_id)
     if existing:
         # Re-generate advice in the requested language if needed
         # (cheap — reuses saved analysis data)
-        report, farm = await _load_report_and_farm(report_id)
         if existing.get("disease"):
             weather_summary = _fmt_weather({
                 "temperature": 0, "humidity": 0, "rainfall": 0
@@ -310,6 +312,7 @@ async def complete_analysis(
             )
             return ok({
                 "report_id": report_id,
+                "preferred_language": preferred_language,
                 "diagnosis": {
                     "disease": existing["disease"],
                     "confidence": existing["final_confidence"],
@@ -323,9 +326,6 @@ async def complete_analysis(
                 "farmer_advice": advice,
                 "needs_additional_photo": False,
             }, "Cached analysis returned.")
-
-    # ── 1. Load report + farm ─────────────────────────────────────────────────
-    report, farm = await _load_report_and_farm(report_id)
 
     disease: str = report.get("disease") or ""
     if not disease:
@@ -414,6 +414,7 @@ async def complete_analysis(
     return ok(
         {
             "report_id": report_id,
+            "preferred_language": preferred_language,
             "diagnosis": {
                 "disease": aggregation["final_disease"],
                 "confidence": aggregation["final_confidence"],
@@ -445,7 +446,7 @@ async def complete_analysis(
 @router.get("/{report_id}/advice")
 async def get_advice_in_language(
     report_id: str,
-    language: str = Query(default="en", regex="^(en|si|ta)$"),
+    language: str = Query(default="en", pattern="^(en|si|ta)$"),
 ):
     """
     Re-generate farmer advice in a different language without re-running the

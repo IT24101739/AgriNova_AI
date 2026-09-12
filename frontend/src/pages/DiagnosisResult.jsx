@@ -77,8 +77,17 @@ const DiagnosisResult = () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await triggerCompleteAnalysis(reportId, language);
+      const activeStored = localStorage.getItem("preferred_language");
+      const targetLang = activeStored || language || null;
+      const result = await triggerCompleteAnalysis(reportId, targetLang);
       setData(result);
+
+      // Sync active UI language with the report's preferred language
+      const resolvedLang = result.preferred_language || result.farmer_advice?.language;
+      if (resolvedLang && resolvedLang !== language) {
+        setLanguage(resolvedLang);
+        localStorage.setItem("preferred_language", resolvedLang);
+      }
       setAdvice(result.farmer_advice);
     } catch (err) {
       setError(err.message || "Failed to load diagnosis. Please try again.");

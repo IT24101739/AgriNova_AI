@@ -70,12 +70,15 @@ def _load_guidance() -> Dict[str, Any]:
 
 
 def _find_guidance(disease: str, guidance: Dict[str, Any]) -> Dict[str, Any] | None:
-    """Case-insensitive lookup of disease in the guidance dict."""
+    """Case-insensitive and substring lookup of disease in the guidance dict."""
     if disease in guidance:
         return guidance[disease]
     dl = disease.lower()
     for key, val in guidance.items():
         if key.lower() == dl:
+            return val
+    for key, val in guidance.items():
+        if key.lower() in dl or dl in key.lower():
             return val
     return None
 
@@ -83,11 +86,47 @@ def _find_guidance(disease: str, guidance: Dict[str, Any]) -> Dict[str, Any] | N
 # ── Fallback ──────────────────────────────────────────────────────────────────
 
 def _fallback(disease: str, language: str) -> Dict[str, Any]:
+    if language == "si":
+        return {
+            "language": "si",
+            "diagnosis_text": (
+                f"ඔබගේ බෝගයට '{disease}' රෝගී තත්ත්වය වැළඳී ඇති බවට හඳුනාගෙන ඇත. "
+                "වගාව ආරක්ෂා කරගැනීම සඳහා පහත සඳහන් ප්‍රායෝගික පියවර වහාම අනුගමනය කරන්න."
+            ),
+            "treatment_steps": [
+                "දැඩි ලෙස රෝගී වූ හෝ වියළී ගිය පත්‍ර ප්‍රවේශමෙන් කඩා ඉවත් කර ක්ෂේත්‍රයෙන් බැහැරව වළලන්න හෝ පුළුස්සන්න.",
+                "ජලය යෙදීමේදී පත්‍ර තෙත් නොවන පරිදි ශාකයේ පාදයට පමණක් වතුර දමන්න.",
+                "ක්ෂේත්‍රයේ වාතාශ්‍රය සහ හිරු එළිය වැඩි කිරීමට ශාක අතර නිසි පරතරය පවත්වා ගන්න.",
+                "පසෙන් බීජාණු ඉහළට විසිවීම වැළැක්වීම සඳහා ශාක පාදය වටා වියළි පිදුරු හෝ වසුන් තට්ටුවක් යොදන්න.",
+                "රෝග ලක්ෂණ තවදුරටත් පැතිරෙන්නේ නම් ප්‍රාදේශීය කෘෂිකර්ම උපදේශකවරයා (AI) සම්බන්ධ කරගන්න.",
+            ],
+            "warning": (
+                "රෝග ලක්ෂණ තවදුරටත් පැතිරේ නම් වහාම ප්‍රාදේශීය කෘෂිකර්ම නිලධාරීවරයෙකු හමුවන්න."
+            ),
+        }
+    if language == "ta":
+        return {
+            "language": "ta",
+            "diagnosis_text": (
+                f"உங்கள் பயிரில் '{disease}' நோய் தாக்கம் இருப்பது கண்டறியப்பட்டுள்ளது. "
+                "பயிரைப் பாதுகாக்க கீழே உள்ள நடைமுறை வழிமுறைகளை உடனடியாகப் பின்பற்றவும்."
+            ),
+            "treatment_steps": [
+                "அதிகமாகப் பாதிக்கப்பட்ட அல்லது காய்ந்த இலைகளைப் பறித்து வயலை விட்டு அகற்றி அப்புறப்படுத்தவும்.",
+                "தண்ணீர் பாய்ச்சும்போது இலைகள் நனையாமல் செடியின் அடிப்பகுதியில் மட்டும் நீர் பாய்ச்சவும்.",
+                "செடிகளுக்கு இடையே போதுமான காற்றோட்டம் மற்றும் சூரிய ஒளி கிடைப்பதை உறுதி செய்யவும்.",
+                "மண்ணிலிருந்து நோய்க்கிருமிகள் பரவுவதைத் தடுக்க செடியின் அடிப்பகுதியில் வைக்கோல் மூடாக்கு இடவும்.",
+                "நோய் தொடர்ந்து பரவினால் உங்கள் பகுதி விவசாய விரிவாக்க அதிகாரியைத் தொடர்பு கொள்ளவும்.",
+            ],
+            "warning": (
+                "நோய் தீவிரம் அடைந்தால் உடனடியாக உங்கள் பகுதி விவசாய அதிகாரியை அணுகி ஆலோசனை பெறவும்."
+            ),
+        }
     return {
-        "language": language,
+        "language": "en",
         "diagnosis_text": (
             f"Your crop may be affected by {disease}. "
-            "Please follow the steps below and contact your local agriculture officer if the problem continues."
+            "Please follow the practical steps below and contact your local agriculture officer if the problem continues."
         ),
         "treatment_steps": [
             "Remove heavily affected leaves and dispose of them away from the field.",

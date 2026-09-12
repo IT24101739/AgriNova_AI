@@ -30,7 +30,7 @@ export default function NewReport() {
   const [crop, setCrop]             = useState('');
   const [imageFile, setImageFile]   = useState(null);
   const [description, setDescription] = useState('');
-  const [language, setLanguage]     = useState('en');
+  const [language, setLanguage]     = useState(() => localStorage.getItem('preferred_language') || 'en');
   const [location, setLocation]     = useState({ latitude: 6.9271, longitude: 79.8612 }); // Default: Colombo/Western
 
   // Submission state
@@ -55,6 +55,9 @@ export default function NewReport() {
 
     if (!validate()) return;
 
+    // Save language preference so results page starts in user-selected language
+    localStorage.setItem('preferred_language', language);
+
     setSubmitState(SUBMIT_STATES.UPLOADING);
 
     const formData = new FormData();
@@ -78,7 +81,7 @@ export default function NewReport() {
       }
 
       setSubmitState(SUBMIT_STATES.SUCCESS);
-      setTimeout(() => navigate(`/reports/${reportId}`), 800);
+      setTimeout(() => navigate(`/results/${reportId}`), 800);
     } catch (err) {
       setSubmitState(SUBMIT_STATES.ERROR);
       setSubmitError(err.message || 'Submission failed. Please verify the backend connection.');
@@ -196,7 +199,10 @@ export default function NewReport() {
             <div>
               <LanguageSelector
                 value={language}
-                onChange={setLanguage}
+                onChange={(lang) => {
+                  setLanguage(lang);
+                  localStorage.setItem('preferred_language', lang);
+                }}
                 error={errors.language}
               />
             </div>

@@ -41,10 +41,12 @@ const unwrap = (response) => {
  * @param {string} language  – "en" | "si" | "ta"
  * @returns {Promise<object>} Full analysis response object
  */
-export const triggerCompleteAnalysis = async (reportId, language = "en") => {
-  const response = await api.post(`/api/reports/${reportId}/complete-analysis`, {
-    preferred_language: language,
-  });
+export const triggerCompleteAnalysis = async (reportId, language = null) => {
+  const payload = {};
+  if (language) {
+    payload.preferred_language = language;
+  }
+  const response = await api.post(`/api/reports/${reportId}/complete-analysis`, payload);
   return unwrap(response);
 };
 

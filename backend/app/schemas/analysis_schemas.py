@@ -24,7 +24,7 @@ class RiskLevel(str, Enum):
 # ── Request bodies ─────────────────────────────────────────────────────────────
 
 class CompleteAnalysisRequest(BaseModel):
-    preferred_language: str = "en"  # en | si | ta
+    preferred_language: Optional[str] = None  # en | si | ta (None = use report's preferred_language)
 
 
 # ── Sub-models ─────────────────────────────────────────────────────────────────
