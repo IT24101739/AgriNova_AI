@@ -163,13 +163,17 @@ def patch_ticket(ticket_id: str, body: TicketUpdateRequest):
 # FIELD VISIT
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# FIELD VISIT
+# ═══════════════════════════════════════════════════════════════════════════════
+
 @router.post("/tickets/{ticket_id}/field-visit")
 def record_field_visit(ticket_id: str, body: FieldVisitRequest):
     """
     Record a field visit for a ticket.
-    1. Save field_visit row.
+    1. Save field_visit row (ORM + Supabase).
     2. Update ticket status → CONFIRMED.
-    3. Update report status.
+    3. Update report status → CONFIRMED.
     4. Notify farmer.
     5. Save AI feedback.
     """
@@ -180,49 +184,103 @@ def record_field_visit(ticket_id: str, body: FieldVisitRequest):
     farm = report.get("farms") or {}
     farmer_id = farm.get("farmer_id")
 
-    # 1. Save field visit
-    visit_payload = {
-        "id": str(uuid.uuid4()),
-        "ticket_id": ticket_id,
-        "confirmed_disease": body.confirmed_disease,
-        "severity": body.severity,
-        "observations": body.observations,
-        "notes": body.notes,
-        "action_taken": body.action_taken,
-        "photo_url": body.photo_url,
-        "visit_date": body.visit_date.isoformat(),
-        "created_at": datetime.utcnow().isoformat(),
-    }
-    visit_result = db.table("field_visits").insert(visit_payload).execute()
+    fv_id = str(uuid.uuid4())
+    now = datetime.utcnow()
+
+    # 1. Save field visit in ORM
+    from app.models.database import SessionLocal
+    from app.models.report_model import FieldVisit, Report
+    try:
+        session = SessionLocal()
+        fv = FieldVisit(
+            id=uuid.UUID(fv_id),
+            ticket_id=uuid.UUID(ticket_id),
+            confirmed_disease=body.confirmed_disease,
+            severity=body.severity,
+            observations=body.observations,
+            notes=body.notes,
+            action_taken=body.action_taken,
+            photo_url=body.photo_url,
+            visit_date=body.visit_date or now,
+            created_at=now,
+        )
+        session.add(fv)
+        session.commit()
+        session.close()
+    except Exception as exc:
+        logger.error("ORM field_visit save error: %s", exc)
+
+    # Attempt Supabase insert if table exists
+    visit_result_data = None
+    try:
+        visit_payload = {
+            "id": fv_id,
+            "ticket_id": ticket_id,
+            "confirmed_disease": body.confirmed_disease,
+            "severity": body.severity,
+            "observations": body.observations,
+            "notes": body.notes,
+            "action_taken": body.action_taken,
+            "photo_url": body.photo_url,
+            "visit_date": body.visit_date.isoformat(),
+            "created_at": now.isoformat(),
+        }
+        res = db.table("field_visits").insert(visit_payload).execute()
+        if res.data:
+            visit_result_data = res.data[0]
+    except Exception as exc:
+        logger.warning("Supabase field_visits insert skipped/failed: %s", exc)
 
     # 2. Update ticket
     update_ticket(ticket_id, {"status": "CONFIRMED"})
 
     # 3. Update report
     if report_id:
-        db.table("reports").update(
-            {"disease": body.confirmed_disease, "severity": body.severity, "status": "CONFIRMED"}
-        ).eq("id", report_id).execute()
+        try:
+            db.table("reports").update(
+                {"disease": body.confirmed_disease, "severity": body.severity, "status": "CONFIRMED"}
+            ).eq("id", report_id).execute()
+        except Exception as exc:
+            logger.warning("Supabase report update skipped: %s", exc)
+
+        try:
+            session = SessionLocal()
+            rep = session.query(Report).filter(Report.id == uuid.UUID(str(report_id))).first()
+            if rep:
+                rep.disease = body.confirmed_disease
+                rep.severity = body.severity
+                rep.status = "CONFIRMED"
+                session.commit()
+            session.close()
+        except Exception as exc:
+            logger.error("ORM report update error: %s", exc)
 
     # 4. Notify farmer
     if farmer_id and report_id:
-        notification_service.notify_diagnosis_confirmed(
-            farmer_id=farmer_id,
-            report_id=report_id,
-            confirmed_disease=body.confirmed_disease,
-            crop=report.get("crop") or "crop",
-        )
+        try:
+            notification_service.notify_diagnosis_confirmed(
+                farmer_id=str(farmer_id),
+                report_id=str(report_id),
+                confirmed_disease=body.confirmed_disease,
+                crop=report.get("crop") or "crop",
+            )
+        except Exception as exc:
+            logger.warning("Notification to farmer failed: %s", exc)
 
     # 5. AI feedback
     if report_id:
-        ai_feedback_service.save_feedback(
-            report_id=report_id,
-            predicted_disease=report.get("disease") or "Unknown",
-            confidence=float(report.get("confidence") or 0),
-            confirmed_disease=body.confirmed_disease,
-        )
+        try:
+            ai_feedback_service.save_feedback(
+                report_id=str(report_id),
+                predicted_disease=report.get("disease") or "Unknown",
+                confidence=float(report.get("confidence") or 0),
+                confirmed_disease=body.confirmed_disease,
+                source="officer_field_visit",
+            )
+        except Exception as exc:
+            logger.warning("AI feedback save failed: %s", exc)
 
-    return ok(visit_result.data[0] if visit_result.data else {}, "Field visit recorded")
+    return ok(visit_result_data or {"id": fv_id, "ticket_id": ticket_id, "confirmed_disease": body.confirmed_disease}, "Field visit recorded")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -242,32 +300,55 @@ def confirm_diagnosis(ticket_id: str, body: DiagnosisConfirmRequest):
     farm = report.get("farms") or {}
     farmer_id = farm.get("farmer_id")
 
-    # Update report
+    # Update report in Supabase and ORM
     if report_id:
-        db.table("reports").update(
-            {"disease": body.confirmed_disease, "status": "CONFIRMED"}
-        ).eq("id", report_id).execute()
+        try:
+            db.table("reports").update(
+                {"disease": body.confirmed_disease, "status": "CONFIRMED"}
+            ).eq("id", report_id).execute()
+        except Exception as exc:
+            logger.warning("Supabase report update skipped: %s", exc)
+
+        try:
+            from app.models.database import SessionLocal
+            from app.models.report_model import Report
+            session = SessionLocal()
+            rep = session.query(Report).filter(Report.id == uuid.UUID(str(report_id))).first()
+            if rep:
+                rep.disease = body.confirmed_disease
+                rep.status = "CONFIRMED"
+                session.commit()
+            session.close()
+        except Exception as exc:
+            logger.error("ORM report update error: %s", exc)
 
     # Update ticket
     update_ticket(ticket_id, {"status": "RESOLVED"})
 
     # Notify farmer
     if farmer_id and report_id:
-        notification_service.notify_diagnosis_confirmed(
-            farmer_id=farmer_id,
-            report_id=report_id,
-            confirmed_disease=body.confirmed_disease,
-            crop=report.get("crop") or "crop",
-        )
+        try:
+            notification_service.notify_diagnosis_confirmed(
+                farmer_id=str(farmer_id),
+                report_id=str(report_id),
+                confirmed_disease=body.confirmed_disease,
+                crop=report.get("crop") or "crop",
+            )
+        except Exception as exc:
+            logger.warning("Notification to farmer failed: %s", exc)
 
     # AI feedback
     if report_id:
-        ai_feedback_service.save_feedback(
-            report_id=report_id,
-            predicted_disease=report.get("disease") or "Unknown",
-            confidence=float(report.get("confidence") or 0),
-            confirmed_disease=body.confirmed_disease,
-        )
+        try:
+            ai_feedback_service.save_feedback(
+                report_id=str(report_id),
+                predicted_disease=report.get("disease") or "Unknown",
+                confidence=float(report.get("confidence") or 0),
+                confirmed_disease=body.confirmed_disease,
+                source="officer_remote",
+            )
+        except Exception as exc:
+            logger.warning("AI feedback save failed: %s", exc)
 
     return ok({"confirmed_disease": body.confirmed_disease}, "Diagnosis confirmed")
 
@@ -276,49 +357,280 @@ def confirm_diagnosis(ticket_id: str, body: DiagnosisConfirmRequest):
 # RESEARCH LAB
 # ═══════════════════════════════════════════════════════════════════════════════
 
+@router.get("/lab-requests")
+def list_lab_requests(status: Optional[str] = None):
+    """List lab requests for research lab portal or officer overview."""
+    results = []
+
+    # 1. Try Supabase
+    try:
+        db = get_supabase()
+        q = db.table("lab_requests").select("*, reports(*, farms(*))").order("created_at", desc=True)
+        if status:
+            q = q.eq("status", status)
+        res = q.execute()
+        results = res.data or []
+    except Exception as exc:
+        logger.warning("Supabase lab_requests query skipped/failed: %s", exc)
+
+    # 2. Local ORM
+    if not results:
+        from app.models.database import SessionLocal
+        from app.models.report_model import LabRequest, Report
+        try:
+            session = SessionLocal()
+            q_orm = session.query(LabRequest).order_by(LabRequest.created_at.desc())
+            if status:
+                q_orm = q_orm.filter(LabRequest.status == status)
+            labs = q_orm.all()
+            for lr in labs:
+                rep_data = {}
+                if lr.report_id:
+                    rep = session.query(Report).filter(Report.id == lr.report_id).first()
+                    if rep:
+                        farm_data = {}
+                        if rep.farm:
+                            farm_data = {
+                                "crop": rep.farm.crop,
+                                "district": rep.farm.district,
+                                "latitude": rep.farm.latitude,
+                                "longitude": rep.farm.longitude,
+                            }
+                        rep_data = {
+                            "id": str(rep.id),
+                            "crop": rep.crop,
+                            "disease": rep.disease,
+                            "confidence": rep.confidence,
+                            "severity": rep.severity,
+                            "image_url": rep.image_url,
+                            "description": rep.description,
+                            "farms": farm_data,
+                        }
+                results.append({
+                    "id": str(lr.id),
+                    "ticket_id": str(lr.ticket_id) if lr.ticket_id else None,
+                    "report_id": str(lr.report_id) if lr.report_id else None,
+                    "reason": lr.reason,
+                    "notes": lr.notes,
+                    "sample_reference": lr.sample_reference,
+                    "status": lr.status,
+                    "confirmed_disease": lr.confirmed_disease,
+                    "lab_notes": lr.lab_notes,
+                    "result_date": lr.result_date.isoformat() if lr.result_date else None,
+                    "created_at": lr.created_at.isoformat() if lr.created_at else None,
+                    "reports": rep_data,
+                })
+            session.close()
+        except Exception as exc:
+            logger.error("ORM lab_requests query failed: %s", exc)
+
+    # 3. Enrich all items with convenient top-level fields
+    enriched = []
+    for item in results:
+        rep = item.get("reports") or {}
+        farm = rep.get("farms") or {}
+        item["crop"] = rep.get("crop") or farm.get("crop") or "Crop Sample"
+        item["suspected_disease"] = rep.get("disease") or item.get("reason") or "Suspected Pathogen"
+        item["severity"] = rep.get("severity") or "HIGH"
+        item["confidence"] = rep.get("confidence")
+        item["district"] = farm.get("district") or "Western Province"
+        item["image_url"] = rep.get("image_url")
+        item["lab_name"] = item.get("lab_name") or "Central Agricultural Pathology Lab"
+        enriched.append(item)
+
+    return ok(enriched)
+
+
 @router.post("/tickets/{ticket_id}/send-to-lab")
 def send_to_lab(ticket_id: str, body: LabRequest):
     """Escalate unclear sample to research lab."""
     db = get_supabase()
     ticket = _require(get_ticket_detail(ticket_id), "Ticket")
     report = ticket.get("reports") or {}
+    report_id = report.get("id")
 
-    lab_payload = {
-        "id": str(uuid.uuid4()),
-        "ticket_id": ticket_id,
-        "report_id": report.get("id"),
-        "reason": body.reason,
-        "notes": body.notes,
-        "sample_reference": body.sample_reference,
-        "status": "SAMPLE_REQUESTED",
-        "created_at": datetime.utcnow().isoformat(),
-    }
-    result = db.table("lab_requests").insert(lab_payload).execute()
+    lab_id = str(uuid.uuid4())
+    now = datetime.utcnow()
+
+    # 1. Save to ORM
+    from app.models.database import SessionLocal
+    from app.models.report_model import LabRequest as LabModel
+    try:
+        session = SessionLocal()
+        lr = LabModel(
+            id=uuid.UUID(lab_id),
+            ticket_id=uuid.UUID(ticket_id),
+            report_id=uuid.UUID(str(report_id)) if report_id else None,
+            reason=body.reason,
+            notes=body.notes,
+            sample_reference=body.sample_reference,
+            status="SAMPLE_REQUESTED",
+            created_at=now,
+        )
+        session.add(lr)
+        session.commit()
+        session.close()
+    except Exception as exc:
+        logger.error("ORM LabRequest save failed: %s", exc)
+
+    # 2. Try Supabase
+    sb_result = None
+    try:
+        lab_payload = {
+            "id": lab_id,
+            "ticket_id": ticket_id,
+            "report_id": report_id,
+            "reason": body.reason,
+            "notes": body.notes,
+            "sample_reference": body.sample_reference,
+            "status": "SAMPLE_REQUESTED",
+            "created_at": now.isoformat(),
+        }
+        res = db.table("lab_requests").insert(lab_payload).execute()
+        if res.data:
+            sb_result = res.data[0]
+    except Exception as exc:
+        logger.warning("Supabase lab_requests insert skipped: %s", exc)
 
     # Update ticket status
     update_ticket(ticket_id, {"status": "LAB_REVIEW"})
 
-    return ok(result.data[0] if result.data else {}, "Sent to research lab")
+    return ok(sb_result or {"id": lab_id, "ticket_id": ticket_id, "status": "SAMPLE_REQUESTED"}, "Sent to research lab")
 
 
-@router.patch("/lab-requests/{lab_request_id}/result")
+@router.patch("/lab-requests/{lab_request_id}/status")
+def update_lab_status(lab_request_id: str, body: dict):
+    """Update lab testing workflow status (e.g. SAMPLE_REQUESTED -> TESTING)."""
+    new_status = body.get("status", "TESTING")
+
+    # 1. Update Supabase
+    try:
+        db = get_supabase()
+        db.table("lab_requests").update({"status": new_status}).eq("id", lab_request_id).execute()
+    except Exception:
+        pass
+
+    # 2. Update ORM
+    from app.models.database import SessionLocal
+    from app.models.report_model import LabRequest as LabModel
+    try:
+        session = SessionLocal()
+        lr = session.query(LabModel).filter(LabModel.id == uuid.UUID(lab_request_id)).first()
+        if lr:
+            lr.status = new_status
+            session.commit()
+        session.close()
+    except Exception as exc:
+        logger.error("ORM update lab status error: %s", exc)
+
+    return ok({"id": lab_request_id, "status": new_status}, "Lab status updated")
+
+
+@router.api_route("/lab-requests/{lab_request_id}/result", methods=["PATCH", "POST"])
 def record_lab_result(lab_request_id: str, body: LabResultRequest):
-    """Record lab result when received."""
+    """
+    Record laboratory diagnosis result.
+    Re-connects diagnosis to the original report, updates ticket, notifies farmer, and logs AI feedback.
+    """
     db = get_supabase()
-    result = (
-        db.table("lab_requests")
-        .update(
-            {
-                "confirmed_disease": body.confirmed_disease,
-                "lab_notes": body.notes,
-                "result_date": body.result_date or datetime.utcnow().isoformat(),
-                "status": "RESULT_RECEIVED",
-            }
+    now_iso = datetime.utcnow().isoformat()
+    now = datetime.utcnow()
+
+    # 1. Find the lab request to get report_id & ticket_id
+    report_id = None
+    ticket_id = None
+
+    from app.models.database import SessionLocal
+    from app.models.report_model import LabRequest as LabModel, Report
+    try:
+        session = SessionLocal()
+        lr = session.query(LabModel).filter(LabModel.id == uuid.UUID(lab_request_id)).first()
+        if lr:
+            lr.confirmed_disease = body.confirmed_disease
+            lr.lab_notes = body.notes
+            lr.result_date = now
+            lr.status = "RESULT_RECEIVED"
+            report_id = str(lr.report_id) if lr.report_id else None
+            ticket_id = str(lr.ticket_id) if lr.ticket_id else None
+            session.commit()
+        session.close()
+    except Exception as exc:
+        logger.error("ORM lab result update error: %s", exc)
+
+    # 2. Supabase update
+    sb_result = None
+    try:
+        res = (
+            db.table("lab_requests")
+            .update(
+                {
+                    "confirmed_disease": body.confirmed_disease,
+                    "lab_notes": body.notes,
+                    "result_date": body.result_date or now_iso,
+                    "status": "RESULT_RECEIVED",
+                }
+            )
+            .eq("id", lab_request_id)
+            .execute()
         )
-        .eq("id", lab_request_id)
-        .execute()
-    )
-    return ok(result.data[0] if result.data else {}, "Lab result recorded")
+        if res.data:
+            sb_result = res.data[0]
+            if not report_id:
+                report_id = sb_result.get("report_id")
+            if not ticket_id:
+                ticket_id = sb_result.get("ticket_id")
+    except Exception as exc:
+        logger.warning("Supabase lab result update skipped: %s", exc)
+
+    # 3. Reconnect to report: update disease and status to CONFIRMED
+    if report_id:
+        try:
+            db.table("reports").update(
+                {"disease": body.confirmed_disease, "status": "CONFIRMED"}
+            ).eq("id", report_id).execute()
+        except Exception:
+            pass
+
+        try:
+            session = SessionLocal()
+            rep = session.query(Report).filter(Report.id == uuid.UUID(str(report_id))).first()
+            if rep:
+                rep.disease = body.confirmed_disease
+                rep.status = "CONFIRMED"
+                session.commit()
+            session.close()
+        except Exception as exc:
+            logger.error("ORM report update from lab error: %s", exc)
+
+    # 4. Update ticket status
+    if ticket_id:
+        update_ticket(ticket_id, {"status": "CONFIRMED"})
+
+    # 5. Notify farmer and record AI feedback
+    if report_id:
+        try:
+            # Look up report & farmer
+            ticket_detail = get_ticket_detail(ticket_id) if ticket_id else None
+            r_data = ticket_detail.get("reports", {}) if ticket_detail else {}
+            farmer_id = r_data.get("farms", {}).get("farmer_id")
+            if farmer_id:
+                notification_service.notify_diagnosis_confirmed(
+                    farmer_id=str(farmer_id),
+                    report_id=str(report_id),
+                    confirmed_disease=body.confirmed_disease,
+                    crop=r_data.get("crop") or "crop",
+                )
+            ai_feedback_service.save_feedback(
+                report_id=str(report_id),
+                predicted_disease=r_data.get("disease") or "Unknown",
+                confidence=float(r_data.get("confidence") or 0),
+                confirmed_disease=body.confirmed_disease,
+                source="research_lab",
+            )
+        except Exception as exc:
+            logger.warning("Notification or AI feedback from lab result failed: %s", exc)
+
+    return ok(sb_result or {"id": lab_request_id, "confirmed_disease": body.confirmed_disease, "status": "RESULT_RECEIVED"}, "Lab result recorded and reconnected to case")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

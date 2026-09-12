@@ -69,11 +69,17 @@ export default function LoginPage() {
     setSuccessMsg('');
     if (authMode === 'signin') {
       if (role === 'farmer') {
-        setEmail(demoAccounts.FARMER.email);
-        setPassword(demoAccounts.FARMER.password);
-      } else {
-        setEmail(demoAccounts.OFFICER.email);
-        setPassword(demoAccounts.OFFICER.password);
+        setEmail(demoAccounts?.FARMER?.email || 'farmer@gmail.com');
+        setPassword(demoAccounts?.FARMER?.password || 'farmer123');
+      } else if (role === 'officer') {
+        setEmail(demoAccounts?.OFFICER?.email || 'officer@gmail.com');
+        setPassword(demoAccounts?.OFFICER?.password || 'officer123');
+      } else if (role === 'lab') {
+        setEmail(demoAccounts?.LAB?.email || 'lab@gmail.com');
+        setPassword(demoAccounts?.LAB?.password || 'lab123');
+      } else if (role === 'admin') {
+        setEmail(demoAccounts?.ADMIN?.email || 'admin@gmail.com');
+        setPassword(demoAccounts?.ADMIN?.password || 'admin123');
       }
     }
   };
@@ -84,11 +90,17 @@ export default function LoginPage() {
     setError('');
     setSuccessMsg('');
     if (role === 'farmer') {
-      setEmail(demoAccounts.FARMER.email);
-      setPassword(demoAccounts.FARMER.password);
-    } else {
-      setEmail(demoAccounts.OFFICER.email);
-      setPassword(demoAccounts.OFFICER.password);
+      setEmail(demoAccounts?.FARMER?.email || 'farmer@gmail.com');
+      setPassword(demoAccounts?.FARMER?.password || 'farmer123');
+    } else if (role === 'officer') {
+      setEmail(demoAccounts?.OFFICER?.email || 'officer@gmail.com');
+      setPassword(demoAccounts?.OFFICER?.password || 'officer123');
+    } else if (role === 'lab') {
+      setEmail(demoAccounts?.LAB?.email || 'lab@gmail.com');
+      setPassword(demoAccounts?.LAB?.password || 'lab123');
+    } else if (role === 'admin') {
+      setEmail(demoAccounts?.ADMIN?.email || 'admin@gmail.com');
+      setPassword(demoAccounts?.ADMIN?.password || 'admin123');
     }
   };
 
@@ -141,7 +153,7 @@ export default function LoginPage() {
         role: selectedRole,
         district,
         phone: phone.trim() || null,
-        badge: selectedRole === 'officer' ? (badge.trim() || 'AO-REG-2026') : null,
+        badge: selectedRole === 'officer' ? (badge.trim() || 'AO-REG-2026') : (selectedRole === 'lab' ? (badge.trim() || 'LAB-SL-01') : (selectedRole === 'admin' ? 'SYS-ADMIN' : null)),
         preferred_language: preferredLanguage,
       };
 
@@ -283,47 +295,73 @@ export default function LoginPage() {
                   <span className="text-[10px] text-emerald-400 uppercase tracking-wider font-mono font-bold">1-Click Fill</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     type="button"
                     onClick={() => handleQuickFill('farmer')}
-                    className={`p-3 rounded-xl border text-left transition-all ${
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
                       selectedRole === 'farmer'
                         ? 'bg-emerald-500/20 border-emerald-500/50 ring-1 ring-emerald-500/40 shadow-lg shadow-emerald-500/10'
                         : 'bg-white/5 border-white/5 hover:border-emerald-500/30'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-emerald-300 flex items-center gap-1">
-                        🌾 Farmer
-                      </span>
-                      <span className="text-[9px] px-2 py-0.5 rounded-md bg-emerald-500/25 text-emerald-200 font-bold">
-                        Auto Fill
-                      </span>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[11px] font-bold text-emerald-300">🌾 Farmer</span>
+                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-emerald-500/25 text-emerald-200 font-bold">1-Click</span>
                     </div>
-                    <p className="text-[11px] font-mono text-slate-200 truncate">farmer@gmail.com</p>
-                    <p className="text-[10px] font-mono text-emerald-400 font-semibold">farmer123</p>
+                    <p className="text-[10px] font-mono text-slate-200 truncate">farmer@gmail.com</p>
+                    <p className="text-[9px] font-mono text-emerald-400 font-semibold">farmer123</p>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleQuickFill('officer')}
-                    className={`p-3 rounded-xl border text-left transition-all ${
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
                       selectedRole === 'officer'
                         ? 'bg-blue-500/20 border-blue-500/50 ring-1 ring-blue-500/40 shadow-lg shadow-blue-500/10'
                         : 'bg-white/5 border-white/5 hover:border-blue-500/30'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold text-blue-300 flex items-center gap-1">
-                        🛡️ Officer
-                      </span>
-                      <span className="text-[9px] px-2 py-0.5 rounded-md bg-blue-500/25 text-blue-200 font-bold">
-                        Auto Fill
-                      </span>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[11px] font-bold text-blue-300">🛡️ Officer</span>
+                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-blue-500/25 text-blue-200 font-bold">1-Click</span>
                     </div>
-                    <p className="text-[11px] font-mono text-slate-200 truncate">officer@gmail.com</p>
-                    <p className="text-[10px] font-mono text-blue-400 font-semibold">officer123</p>
+                    <p className="text-[10px] font-mono text-slate-200 truncate">officer@gmail.com</p>
+                    <p className="text-[9px] font-mono text-blue-400 font-semibold">officer123</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickFill('lab')}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      selectedRole === 'lab'
+                        ? 'bg-purple-500/20 border-purple-500/50 ring-1 ring-purple-500/40 shadow-lg shadow-purple-500/10'
+                        : 'bg-white/5 border-white/5 hover:border-purple-500/30'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[11px] font-bold text-purple-300">🔬 Lab</span>
+                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-purple-500/25 text-purple-200 font-bold">1-Click</span>
+                    </div>
+                    <p className="text-[10px] font-mono text-slate-200 truncate">lab@gmail.com</p>
+                    <p className="text-[9px] font-mono text-purple-400 font-semibold">lab123</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickFill('admin')}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      selectedRole === 'admin'
+                        ? 'bg-amber-500/20 border-amber-500/50 ring-1 ring-amber-500/40 shadow-lg shadow-amber-500/10'
+                        : 'bg-white/5 border-white/5 hover:border-amber-500/30'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[11px] font-bold text-amber-300">⚙️ Admin</span>
+                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-amber-500/25 text-amber-200 font-bold">1-Click</span>
+                    </div>
+                    <p className="text-[10px] font-mono text-slate-200 truncate">admin@gmail.com</p>
+                    <p className="text-[9px] font-mono text-amber-400 font-semibold">admin123</p>
                   </button>
                 </div>
               </div>
@@ -333,30 +371,54 @@ export default function LoginPage() {
             <div className="glass-elevated rounded-2xl p-6 sm:p-7 border border-emerald-500/25 shadow-2xl space-y-5">
               
               {/* Role Selector Tabs */}
-              <div className="grid grid-cols-2 p-1 rounded-xl bg-black/40 border border-emerald-500/20 text-xs font-semibold">
+              <div className="grid grid-cols-2 sm:grid-cols-4 p-1 rounded-xl bg-black/40 border border-emerald-500/20 text-xs font-semibold gap-1">
                 <button
                   type="button"
                   onClick={() => handleRoleChange('farmer')}
-                  className={`py-2 rounded-lg flex items-center justify-center gap-2 transition-all ${
+                  className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
                     selectedRole === 'farmer'
                       ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-md font-bold'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <span>🌾</span>
-                  <span>{authMode === 'signup' ? 'I am a Farmer' : 'Farmer Portal'}</span>
+                  <span className="truncate">{authMode === 'signup' ? 'Farmer' : 'Farmer'}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleRoleChange('officer')}
-                  className={`py-2 rounded-lg flex items-center justify-center gap-2 transition-all ${
+                  className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
                     selectedRole === 'officer'
                       ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md font-bold'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
                   <span>🛡️</span>
-                  <span>{authMode === 'signup' ? 'I am an Officer' : 'Officer Portal'}</span>
+                  <span className="truncate">{authMode === 'signup' ? 'Officer' : 'Officer'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRoleChange('lab')}
+                  className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                    selectedRole === 'lab'
+                      ? 'bg-gradient-to-r from-purple-600 to-violet-600 text-white shadow-md font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>🔬</span>
+                  <span className="truncate">{authMode === 'signup' ? 'Lab' : 'Research Lab'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRoleChange('admin')}
+                  className={`py-2 px-1 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                    selectedRole === 'admin'
+                      ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md font-bold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>⚙️</span>
+                  <span className="truncate">{authMode === 'signup' ? 'Admin' : 'Admin'}</span>
                 </button>
               </div>
 

@@ -191,15 +191,23 @@ export default function OfficerTicket() {
       {ticket.status !== 'RESOLVED' && ticket.status !== 'CONFIRMED' && (
         <div className="glass rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
           <span className="text-xs text-slate-400 font-semibold uppercase tracking-widest">Set Status:</span>
-          {['FIELD_VISIT_REQUIRED', 'UNDER_REVIEW', 'LAB_REVIEW'].map(s => (
-            <button
-              key={s}
-              onClick={() => handleStatusChange(s)}
-              className="btn-secondary text-xs py-1.5"
-            >
-              {s.replace(/_/g, ' ')}
-            </button>
-          ))}
+          {['FIELD_VISIT_REQUIRED', 'UNDER_REVIEW', 'LAB_REVIEW'].map(s => {
+            const isCurrent = ticket.status === s;
+            return (
+              <button
+                key={s}
+                onClick={() => handleStatusChange(s)}
+                className={`text-xs py-1.5 px-3 rounded-xl font-medium transition-all ${
+                  isCurrent
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50 ring-2 ring-emerald-400/50'
+                    : 'btn-secondary hover:text-white'
+                }`}
+              >
+                {isCurrent && <span className="mr-1 text-emerald-200">✓</span>}
+                {s.replace(/_/g, ' ')}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -266,7 +274,7 @@ export default function OfficerTicket() {
                   <div>
                     <label className="ag-label">Confirmed Disease</label>
                     <select
-                      className="ag-select"
+                      className={`ag-select transition-all ${confirmForm.confirmed_disease ? 'border-emerald-400/80 bg-emerald-950/60 text-emerald-200 font-semibold ring-1 ring-emerald-500/30' : 'text-slate-300'}`}
                       value={confirmForm.confirmed_disease}
                       onChange={e => setConfirmForm(f => ({ ...f, confirmed_disease: e.target.value }))}
                     >
@@ -306,7 +314,8 @@ export default function OfficerTicket() {
               {activeTab === 'lab' && (
                 <ResearchLabPanel
                   ticketId={ticketId}
-                  existingLabRequest={null}
+                  ticket={ticket}
+                  existingLabRequest={ticket.lab_requests?.[0] || null}
                   onSent={() => {
                     setSuccessMsg('Case sent to research lab.');
                     fetch();

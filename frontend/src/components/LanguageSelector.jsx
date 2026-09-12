@@ -1,5 +1,5 @@
 /**
- * LanguageSelector — toggle between English, Sinhala, Tamil.
+ * LanguageSelector – toggle between English, Sinhala, Tamil.
  * Emits 'en' | 'si' | 'ta' values.
  */
 
@@ -13,18 +13,11 @@ const LANGUAGES = [
 
 export default function LanguageSelector({ value, onChange, error }) {
   return (
-    <div className="form-group">
-      <label className="form-label">Preferred Language *</label>
-      <div
-        style={{
-          display: 'flex',
-          gap: '0.5rem',
-          background: 'var(--color-surface-2)',
-          borderRadius: 'var(--radius-md)',
-          padding: '0.3rem',
-          border: '1.5px solid var(--color-border)',
-        }}
-      >
+    <div className="w-full min-w-0 flex flex-col">
+      <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+        Preferred Language <span className="text-emerald-400">*</span>
+      </label>
+      <div className="grid grid-cols-3 gap-2 bg-[#0b1329] border border-white/10 rounded-xl p-1.5 w-full min-w-0">
         {LANGUAGES.map((lang) => {
           const selected = value === lang.code;
           return (
@@ -32,37 +25,21 @@ export default function LanguageSelector({ value, onChange, error }) {
               key={lang.code}
               type="button"
               onClick={() => onChange(lang.code)}
-              style={{
-                flex: 1,
-                padding: '0.6rem 0.25rem',
-                borderRadius: '8px',
-                border: 'none',
-                background: selected
-                  ? 'linear-gradient(135deg, #16a34a, #22c55e)'
-                  : 'transparent',
-                color: selected ? '#fff' : 'var(--color-muted)',
-                fontWeight: selected ? 700 : 500,
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.1rem',
-                boxShadow: selected ? '0 2px 8px rgba(34,197,94,0.3)' : 'none',
-              }}
+              className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-lg text-xs transition-all cursor-pointer ${
+                selected
+                  ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 font-medium'
+              }`}
               aria-pressed={selected}
               aria-label={`Select ${lang.label}`}
             >
-              <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{lang.native}</span>
-              {value !== lang.code && (
-                <span style={{ fontSize: '0.65rem', opacity: 0.6 }}>{lang.label}</span>
-              )}
+              <span className="text-xs font-bold leading-tight">{lang.native}</span>
+              <span className="text-[10px] opacity-75 leading-tight mt-0.5">{lang.label}</span>
             </button>
           );
         })}
       </div>
-      {error && <p className="form-error">⚠ {error}</p>}
+      {error && <p className="text-red-400 text-xs mt-1.5">⚠ {error}</p>}
     </div>
   );
 }

@@ -21,7 +21,7 @@ const StatTile = ({ icon, label, value, unit }) => (
 );
 
 const WeatherEvidence = ({ weather = {}, supportsDisease = false }) => {
-  const riskKey = (weather.risk || "LOW").toUpperCase();
+  const riskKey = (weather.risk || weather.weather_risk || "LOW").toUpperCase();
   const riskConfig = RISK_COLORS[riskKey] || RISK_COLORS.LOW;
 
   return (

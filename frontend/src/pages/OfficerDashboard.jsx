@@ -5,7 +5,7 @@ import RegionalDiseaseMap from '../components/RegionalDiseaseMap';
 import { useMapReports } from '../hooks/useMapReports';
 import {
   Ticket, AlertTriangle, Activity, CheckCircle,
-  CalendarDays, RefreshCw, Filter,
+  CalendarDays, RefreshCw, Filter, X,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -105,24 +105,55 @@ export default function OfficerDashboard() {
           <h2 className="font-semibold text-white flex-1">Officer Tickets</h2>
 
           {/* Filters */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
-            <select
-              className="ag-select w-36 text-xs py-1.5"
-              value={filters.priority || ''}
-              onChange={e => setFilters(f => ({ ...f, priority: e.target.value || undefined }))}
-            >
-              <option value="">All priorities</option>
-              {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-            <select
-              className="ag-select w-44 text-xs py-1.5"
-              value={filters.status || ''}
-              onChange={e => setFilters(f => ({ ...f, status: e.target.value || undefined }))}
-            >
-              <option value="">All statuses</option>
-              {statusOptions.map(s => <option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
-            </select>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
+              <Filter className="w-3.5 h-3.5 text-emerald-400" />
+              Filter:
+            </span>
+
+            {/* Priority Filter */}
+            <div className="relative">
+              <select
+                className={`ag-select min-w-[145px] text-xs py-2 transition-all ${
+                  filters.priority
+                    ? 'border-emerald-400/80 bg-emerald-950/70 text-emerald-200 ring-1 ring-emerald-500/40 font-semibold shadow-sm'
+                    : 'text-slate-300'
+                }`}
+                value={filters.priority || ''}
+                onChange={e => setFilters(f => ({ ...f, priority: e.target.value || undefined }))}
+              >
+                <option value="">All priorities</option>
+                {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="relative">
+              <select
+                className={`ag-select min-w-[210px] text-xs py-2 transition-all ${
+                  filters.status
+                    ? 'border-emerald-400/80 bg-emerald-950/70 text-emerald-200 ring-1 ring-emerald-500/40 font-semibold shadow-sm'
+                    : 'text-slate-300'
+                }`}
+                value={filters.status || ''}
+                onChange={e => setFilters(f => ({ ...f, status: e.target.value || undefined }))}
+              >
+                <option value="">All statuses</option>
+                {statusOptions.map(s => <option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
+              </select>
+            </div>
+
+            {/* Reset Filters button */}
+            {Boolean(filters.priority || filters.status) && (
+              <button
+                onClick={() => setFilters({})}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-emerald-300 bg-emerald-900/40 border border-emerald-500/30 hover:bg-emerald-900/60 hover:text-white transition-all duration-200 animate-fade-in"
+                title="Clear all filters"
+              >
+                <X className="w-3.5 h-3.5" />
+                Clear
+              </button>
+            )}
           </div>
 
           {/* View toggle */}

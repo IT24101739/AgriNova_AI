@@ -11,11 +11,10 @@ export default function ProtectedRoute({ children, requiredRole }) {
   }
 
   if (requiredRole && user.role !== requiredRole) {
-    // If an officer tries to go to a farmer-only restricted route or farmer tries to go to officer console
-    if (requiredRole === 'officer') {
-      return <Navigate to="/login?role=officer" replace />;
-    }
-    return <Navigate to="/" replace />;
+    if (user.role === 'officer') return <Navigate to="/officer" replace />;
+    if (user.role === 'lab') return <Navigate to="/lab" replace />;
+    if (user.role === 'admin') return <Navigate to="/admin" replace />;
+    return <Navigate to="/farmer" replace />;
   }
 
   return children;

@@ -21,6 +21,7 @@ import WeatherEvidence from "../components/WeatherEvidence";
 import {
   getAdviceInLanguage,
   triggerCompleteAnalysis,
+  getWeatherRisk,
 } from "../services/analysisService";
 
 // ── Language config ───────────────────────────────────────────────────────────
@@ -80,6 +81,27 @@ const DiagnosisResult = () => {
       const activeStored = localStorage.getItem("preferred_language");
       const targetLang = activeStored || language || null;
       const result = await triggerCompleteAnalysis(reportId, targetLang);
+
+      // Fallback: If weather details are missing, fetch directly from weather API
+      if (!result.weather || result.weather.temperature === undefined || result.weather.temperature === null) {
+        try {
+          const wRisk = await getWeatherRisk(reportId);
+          if (wRisk) {
+            result.weather = {
+              ...result.weather,
+              temperature: wRisk.temperature,
+              humidity: wRisk.humidity,
+              rainfall: wRisk.rainfall,
+              risk: wRisk.weather_risk || wRisk.risk || "LOW",
+              weather_risk: wRisk.weather_risk || wRisk.risk || "LOW",
+              supports_prediction: wRisk.supports_prediction,
+            };
+          }
+        } catch (wErr) {
+          console.warn("Weather fallback fetch error:", wErr);
+        }
+      }
+
       setData(result);
 
       // Sync active UI language with the report's preferred language

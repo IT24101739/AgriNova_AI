@@ -6,7 +6,7 @@ Column names match the agreed shared schema exactly — do not rename.
 import uuid
 from datetime import datetime
 from sqlalchemy import (
-    Column, String, Float, DateTime, ForeignKey, Text, Enum as SAEnum, TypeDecorator, CHAR
+    Column, String, Float, DateTime, ForeignKey, Text, Enum as SAEnum, TypeDecorator, CHAR, Boolean, Integer
 )
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
@@ -152,5 +152,115 @@ class User(Base):
     phone = Column(String(50), nullable=True)
     badge = Column(String(100), nullable=True)
     preferred_language = Column(String(5), nullable=False, default="en")
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+# ---------------------------------------------------------------------------
+# Officer Ticket
+# ---------------------------------------------------------------------------
+
+class OfficerTicket(Base):
+    __tablename__ = "officer_tickets"
+
+    id = Column(UUIDType, primary_key=True, default=uuid.uuid4)
+    report_id = Column(UUIDType, ForeignKey("reports.id"), nullable=True, index=True)
+    reason = Column(Text, nullable=True)
+    priority = Column(String(20), nullable=False, default="MEDIUM")
+    assigned_officer = Column(UUIDType, nullable=True)
+    status = Column(String(30), nullable=False, default="OPEN")
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+# ---------------------------------------------------------------------------
+# Field Visit
+# ---------------------------------------------------------------------------
+
+class FieldVisit(Base):
+    __tablename__ = "field_visits"
+
+    id = Column(UUIDType, primary_key=True, default=uuid.uuid4)
+    ticket_id = Column(UUIDType, ForeignKey("officer_tickets.id"), nullable=True, index=True)
+    confirmed_disease = Column(String(200), nullable=False)
+    severity = Column(String(20), nullable=True)
+    observations = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    action_taken = Column(Text, nullable=True)
+    photo_url = Column(Text, nullable=True)
+    visit_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+# ---------------------------------------------------------------------------
+# Research Lab Request
+# ---------------------------------------------------------------------------
+
+class LabRequest(Base):
+    __tablename__ = "lab_requests"
+
+    id = Column(UUIDType, primary_key=True, default=uuid.uuid4)
+    ticket_id = Column(UUIDType, ForeignKey("officer_tickets.id"), nullable=True, index=True)
+    report_id = Column(UUIDType, ForeignKey("reports.id"), nullable=True, index=True)
+    reason = Column(Text, nullable=False)
+    notes = Column(Text, nullable=True)
+    sample_reference = Column(String(100), nullable=True)
+    status = Column(String(30), nullable=False, default="SAMPLE_REQUESTED")  # SAMPLE_REQUESTED | TESTING | RESULT_RECEIVED
+    confirmed_disease = Column(String(200), nullable=True)
+    lab_notes = Column(Text, nullable=True)
+    result_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+# ---------------------------------------------------------------------------
+# Outbreak
+# ---------------------------------------------------------------------------
+
+class Outbreak(Base):
+    __tablename__ = "outbreaks"
+
+    id = Column(UUIDType, primary_key=True, default=uuid.uuid4)
+    disease = Column(String(200), nullable=False)
+    crop = Column(String(100), nullable=False)
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    radius_km = Column(Float, nullable=False, default=25.0)
+    status = Column(String(30), nullable=False, default="CANDIDATE")  # CANDIDATE | CONFIRMED | REJECTED
+    report_count = Column(Integer, nullable=True, default=1)
+    avg_confidence = Column(Float, nullable=True)
+    notes = Column(Text, nullable=True)
+    confirmed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+# ---------------------------------------------------------------------------
+# Notification
+# ---------------------------------------------------------------------------
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(UUIDType, primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUIDType, nullable=False, index=True)
+    report_id = Column(UUIDType, ForeignKey("reports.id"), nullable=True)
+    type = Column(String(50), nullable=False)
+    message = Column(Text, nullable=False)
+    read = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+# ---------------------------------------------------------------------------
+# AI Feedback
+# ---------------------------------------------------------------------------
+
+class AIFeedback(Base):
+    __tablename__ = "ai_feedback"
+
+    id = Column(UUIDType, primary_key=True, default=uuid.uuid4)
+    report_id = Column(UUIDType, ForeignKey("reports.id"), nullable=True)
+    predicted_disease = Column(String(200), nullable=False)
+    confirmed_disease = Column(String(200), nullable=False)
+    confidence = Column(Float, nullable=True)
+    correct = Column(Boolean, default=False, nullable=False)
+    source = Column(String(50), default="officer", nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

@@ -27,10 +27,21 @@ function StatusStepper({ status }) {
   );
 }
 
-export default function ResearchLabPanel({ ticketId, existingLabRequest, onSent }) {
+export default function ResearchLabPanel({ ticketId, ticket, existingLabRequest, onSent }) {
   const [showForm, setShowForm] = useState(false);
   const [resultMode, setResultMode] = useState(false);
-  const [form, setForm] = useState({ reason: '', notes: '', sample_reference: '' });
+
+  const report = ticket?.reports || {};
+  const defaultReason = report.disease
+    ? `Pathogen verification for ${report.crop || 'crop'} (${report.disease})`
+    : 'Suspected novel crop pathogen; unconfirmed by visual inspection';
+  const defaultRef = `SAMPLE-LAB-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  const [form, setForm] = useState({
+    reason: defaultReason,
+    notes: 'Leaf and stem tissue collected in sterile container for PCR assay & microscopic analysis.',
+    sample_reference: defaultRef,
+  });
   const [resultForm, setResultForm] = useState({ confirmed_disease: '', notes: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

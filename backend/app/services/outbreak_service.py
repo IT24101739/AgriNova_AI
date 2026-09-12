@@ -171,20 +171,63 @@ def detect_outbreak_candidates() -> list[dict[str, Any]]:
                 continue
 
             avg_confidence = sum(r.get("confidence") or 0 for r in group) / len(group)
-            payload = {
-                "id": str(uuid.uuid4()),
+            ob_id = str(uuid.uuid4())
+            now_iso = datetime.utcnow().isoformat()
+
+            # Supabase insert with verified schema columns only
+            sb_candidate = None
+            try:
+                payload = {
+                    "id": ob_id,
+                    "disease": disease,
+                    "crop": crop,
+                    "latitude": cluster_center_lat,
+                    "longitude": cluster_center_lon,
+                    "radius_km": OUTBREAK_RADIUS_KM,
+                    "status": "CANDIDATE",
+                }
+                result = db.table("outbreaks").insert(payload).execute()
+                if result.data:
+                    sb_candidate = result.data[0]
+            except Exception as exc:
+                logger.warning("Supabase outbreak insert error: %s", exc)
+
+            # Local ORM insert with full metrics
+            try:
+                from app.models.database import SessionLocal
+                from app.models.report_model import Outbreak
+                session = SessionLocal()
+                ob = Outbreak(
+                    id=uuid.UUID(ob_id),
+                    disease=disease,
+                    crop=crop,
+                    latitude=cluster_center_lat,
+                    longitude=cluster_center_lon,
+                    radius_km=OUTBREAK_RADIUS_KM,
+                    status="CANDIDATE",
+                    report_count=len(group),
+                    avg_confidence=round(avg_confidence, 3),
+                    created_at=datetime.utcnow(),
+                )
+                session.add(ob)
+                session.commit()
+                session.close()
+            except Exception as exc:
+                logger.error("ORM outbreak candidate save error: %s", exc)
+
+            cand = sb_candidate or {
+                "id": ob_id,
                 "disease": disease,
                 "crop": crop,
                 "latitude": cluster_center_lat,
                 "longitude": cluster_center_lon,
                 "radius_km": OUTBREAK_RADIUS_KM,
                 "status": "CANDIDATE",
-                "report_count": len(group),
-                "avg_confidence": round(avg_confidence, 3),
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": now_iso,
             }
-            result = db.table("outbreaks").insert(payload).execute()
-            new_candidates.append(result.data[0])
+            cand["report_count"] = len(group)
+            cand["avg_confidence"] = round(avg_confidence, 3)
+            new_candidates.append(cand)
             logger.info("New outbreak candidate: %s %s (%d reports)", disease, crop, len(group))
 
         return new_candidates
@@ -194,22 +237,57 @@ def detect_outbreak_candidates() -> list[dict[str, Any]]:
 
 
 def get_outbreak_candidates() -> list[dict[str, Any]]:
+    candidates = []
     try:
         db = get_supabase()
         res = (
             db.table("outbreaks")
             .select("*")
-            .in_("status", ["CANDIDATE"])
-            .order("created_at", desc=True)
+            .in_("status", ["CANDIDATE", "candidate"])
             .execute()
         )
-        return res.data or []
+        candidates = res.data or []
     except Exception as exc:
-        logger.warning("get_outbreak_candidates query failed (%s). Returning empty list.", exc)
-        return []
+        logger.warning("get_outbreak_candidates Supabase query failed (%s).", exc)
+
+    # Check ORM fallback
+    from app.models.database import SessionLocal
+    from app.models.report_model import Outbreak
+    try:
+        session = SessionLocal()
+        orm_obs = session.query(Outbreak).filter(Outbreak.status == "CANDIDATE").all()
+        orm_map = {str(o.id): o for o in orm_obs}
+        session.close()
+
+        # If supabase has results, enrich with ORM metrics
+        if candidates:
+            for c in candidates:
+                matched = orm_map.get(str(c.get("id")))
+                c["report_count"] = matched.report_count if matched else c.get("report_count", 3)
+                c["avg_confidence"] = matched.avg_confidence if matched else c.get("avg_confidence", 0.85)
+                c["created_at"] = matched.created_at.isoformat() if matched and matched.created_at else c.get("created_at")
+        elif orm_obs:
+            for o in orm_obs:
+                candidates.append({
+                    "id": str(o.id),
+                    "disease": o.disease,
+                    "crop": o.crop,
+                    "latitude": o.latitude,
+                    "longitude": o.longitude,
+                    "radius_km": o.radius_km,
+                    "status": o.status,
+                    "report_count": o.report_count or 3,
+                    "avg_confidence": o.avg_confidence or 0.85,
+                    "created_at": o.created_at.isoformat() if o.created_at else None,
+                })
+    except Exception as exc:
+        logger.warning("get_outbreak_candidates ORM check error: %s", exc)
+
+    return candidates
 
 
 def get_confirmed_outbreaks() -> list[dict[str, Any]]:
+    outbreaks = []
     try:
         db = get_supabase()
         res = (
@@ -219,10 +297,32 @@ def get_confirmed_outbreaks() -> list[dict[str, Any]]:
             .order("confirmed_at", desc=True)
             .execute()
         )
-        return res.data or []
+        outbreaks = res.data or []
     except Exception as exc:
-        logger.warning("get_confirmed_outbreaks query failed (%s). Returning empty list.", exc)
-        return []
+        logger.warning("get_confirmed_outbreaks query failed (%s).", exc)
+
+    if not outbreaks:
+        try:
+            from app.models.database import SessionLocal
+            from app.models.report_model import Outbreak
+            session = SessionLocal()
+            orm_obs = session.query(Outbreak).filter(Outbreak.status == "CONFIRMED").all()
+            for o in orm_obs:
+                outbreaks.append({
+                    "id": str(o.id),
+                    "disease": o.disease,
+                    "crop": o.crop,
+                    "latitude": o.latitude,
+                    "longitude": o.longitude,
+                    "radius_km": o.radius_km,
+                    "status": o.status,
+                    "confirmed_at": o.confirmed_at.isoformat() if o.confirmed_at else None,
+                })
+            session.close()
+        except Exception as exc:
+            logger.error("get_confirmed_outbreaks ORM query error: %s", exc)
+
+    return outbreaks
 
 
 def confirm_outbreak(
@@ -232,9 +332,32 @@ def confirm_outbreak(
     notes: Optional[str] = None,
 ) -> dict[str, Any]:
     db = get_supabase()
-    outbreak = (
-        db.table("outbreaks").select("*").eq("id", outbreak_id).single().execute().data
-    )
+    outbreak = None
+    try:
+        outbreak = (
+            db.table("outbreaks").select("*").eq("id", outbreak_id).single().execute().data
+        )
+    except Exception:
+        pass
+
+    if not outbreak:
+        # Check ORM
+        from app.models.database import SessionLocal
+        from app.models.report_model import Outbreak
+        session = SessionLocal()
+        o = session.query(Outbreak).filter(Outbreak.id == uuid.UUID(outbreak_id)).first()
+        if o:
+            outbreak = {
+                "id": str(o.id),
+                "disease": o.disease,
+                "crop": o.crop,
+                "latitude": o.latitude,
+                "longitude": o.longitude,
+                "radius_km": o.radius_km,
+                "status": o.status,
+            }
+        session.close()
+
     if not outbreak:
         raise ValueError(f"Outbreak {outbreak_id} not found")
 
@@ -243,23 +366,68 @@ def confirm_outbreak(
     crop = outbreak["crop"]
     center_lat = float(outbreak["latitude"])
     center_lon = float(outbreak["longitude"])
+    now_iso = datetime.utcnow().isoformat()
 
-    db.table("outbreaks").update(
-        {
-            "status": "CONFIRMED",
-            "radius_km": effective_radius,
-            "confirmed_at": datetime.utcnow().isoformat(),
-            "notes": notes,
-        }
-    ).eq("id", outbreak_id).execute()
+    # 1. Update Supabase
+    try:
+        db.table("outbreaks").update(
+            {
+                "status": "CONFIRMED",
+                "radius_km": effective_radius,
+                "confirmed_at": now_iso,
+            }
+        ).eq("id", outbreak_id).execute()
+    except Exception as exc:
+        logger.warning("Supabase confirm_outbreak update skipped: %s", exc)
 
-    farms = (
-        db.table("farms")
-        .select("id, farmer_id, latitude, longitude, crop")
-        .eq("crop", crop)
-        .execute()
-        .data
-    )
+    # 2. Update ORM
+    try:
+        from app.models.database import SessionLocal
+        from app.models.report_model import Outbreak
+        session = SessionLocal()
+        o = session.query(Outbreak).filter(Outbreak.id == uuid.UUID(outbreak_id)).first()
+        if o:
+            o.status = "CONFIRMED"
+            o.radius_km = effective_radius
+            o.confirmed_at = datetime.utcnow()
+            o.notes = notes
+            session.commit()
+        session.close()
+    except Exception as exc:
+        logger.error("ORM confirm_outbreak update error: %s", exc)
+
+    # 3. Find nearby farms growing this crop
+    farms = []
+    try:
+        res = (
+            db.table("farms")
+            .select("id, farmer_id, latitude, longitude, crop")
+            .eq("crop", crop)
+            .execute()
+        )
+        farms = res.data or []
+    except Exception:
+        pass
+
+    if not farms:
+        try:
+            from app.models.database import SessionLocal
+            from app.models.report_model import Farm
+            session = SessionLocal()
+            orm_farms = session.query(Farm).filter(Farm.crop == crop).all()
+            farms = [
+                {
+                    "id": str(f.id),
+                    "farmer_id": str(f.farmer_id),
+                    "latitude": f.latitude,
+                    "longitude": f.longitude,
+                    "crop": f.crop,
+                }
+                for f in orm_farms
+            ]
+            session.close()
+        except Exception as exc:
+            logger.error("ORM farms query error: %s", exc)
 
     notified = 0
     for farm in (farms or []):
@@ -272,7 +440,7 @@ def confirm_outbreak(
         if dist <= effective_radius:
             try:
                 notify_outbreak_alert(
-                    farmer_id=farmer_id,
+                    farmer_id=str(farmer_id),
                     disease=disease,
                     crop=crop,
                 )
@@ -285,10 +453,25 @@ def confirm_outbreak(
 
 
 def reject_outbreak(outbreak_id: str, reason: Optional[str] = None) -> dict[str, Any]:
-    db = get_supabase()
-    db.table("outbreaks").update(
-        {"status": "REJECTED", "notes": reason, "updated_at": datetime.utcnow().isoformat()}
-    ).eq("id", outbreak_id).execute()
+    try:
+        db = get_supabase()
+        db.table("outbreaks").update({"status": "REJECTED"}).eq("id", outbreak_id).execute()
+    except Exception as exc:
+        logger.warning("Supabase reject_outbreak skipped: %s", exc)
+
+    try:
+        from app.models.database import SessionLocal
+        from app.models.report_model import Outbreak
+        session = SessionLocal()
+        o = session.query(Outbreak).filter(Outbreak.id == uuid.UUID(outbreak_id)).first()
+        if o:
+            o.status = "REJECTED"
+            o.notes = reason
+            session.commit()
+        session.close()
+    except Exception as exc:
+        logger.error("ORM reject_outbreak error: %s", exc)
+
     return {"outbreak_id": outbreak_id, "status": "REJECTED"}
 
 

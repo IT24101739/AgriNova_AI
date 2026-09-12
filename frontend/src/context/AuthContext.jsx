@@ -26,6 +26,34 @@ const DEMO_ACCOUNTS = {
     officer_id: '00000000-0000-0000-0000-000000000002',
     badge: 'AO-WP-2026',
   },
+  LAB: {
+    email: 'lab@gmail.com',
+    password: 'lab123',
+    role: 'lab',
+    name: 'National Pathology Research Lab',
+    title: 'Senior Plant Pathologist',
+    district: 'Peradeniya Research Center',
+    id: '00000000-0000-0000-0000-000000000003',
+    badge: 'LAB-SL-01',
+  },
+  ADMIN: {
+    email: 'admin@gmail.com',
+    password: 'admin123',
+    role: 'admin',
+    name: 'System Administrator',
+    title: 'Platform Operations Lead',
+    district: 'Ministry HQ Colombo',
+    id: '00000000-0000-0000-0000-000000000004',
+    badge: 'SYS-ADMIN',
+  },
+};
+
+const getRoleRedirect = (role) => {
+  const r = (role || '').toLowerCase();
+  if (r === 'officer') return '/officer';
+  if (r === 'lab') return '/lab';
+  if (r === 'admin') return '/admin';
+  return '/farmer';
 };
 
 export function AuthProvider({ children }) {
@@ -68,8 +96,9 @@ export function AuthProvider({ children }) {
       const res = await loginUser(cleanEmail, cleanPass);
       if (res && res.success && res.data?.user) {
         const { user: userData, token, redirectTo } = res.data;
-        _persistUserSession(userData, token, redirectTo);
-        return { success: true, user: userData, redirectTo: redirectTo || (userData.role === 'officer' ? '/officer' : '/farmer') };
+        const targetRedirect = redirectTo || getRoleRedirect(userData.role);
+        _persistUserSession(userData, token, targetRedirect);
+        return { success: true, user: userData, redirectTo: targetRedirect };
       }
     } catch (apiErr) {
       // Check demo fallback if backend offline or special demo credentials
@@ -83,11 +112,31 @@ export function AuthProvider({ children }) {
         _persistUserSession(userData, 'demo-token-officer', '/officer');
         return { success: true, user: userData, redirectTo: '/officer' };
       }
+      if (cleanEmail === DEMO_ACCOUNTS.LAB.email && cleanPass === DEMO_ACCOUNTS.LAB.password) {
+        const userData = DEMO_ACCOUNTS.LAB;
+        _persistUserSession(userData, 'demo-token-lab', '/lab');
+        return { success: true, user: userData, redirectTo: '/lab' };
+      }
+      if (cleanEmail === DEMO_ACCOUNTS.ADMIN.email && cleanPass === DEMO_ACCOUNTS.ADMIN.password) {
+        const userData = DEMO_ACCOUNTS.ADMIN;
+        _persistUserSession(userData, 'demo-token-admin', '/admin');
+        return { success: true, user: userData, redirectTo: '/admin' };
+      }
 
       return {
         success: false,
         error: apiErr.message || 'Invalid email or password. Please verify your credentials.',
       };
+    }
+
+    // Direct match against demo accounts if API response structure was unexpected
+    for (const key of Object.keys(DEMO_ACCOUNTS)) {
+      const demo = DEMO_ACCOUNTS[key];
+      if (cleanEmail === demo.email && cleanPass === demo.password) {
+        const targetRedirect = getRoleRedirect(demo.role);
+        _persistUserSession(demo, `demo-token-${demo.role}`, targetRedirect);
+        return { success: true, user: demo, redirectTo: targetRedirect };
+      }
     }
 
     return {
@@ -101,11 +150,12 @@ export function AuthProvider({ children }) {
       const res = await signupUser(userData);
       if (res && res.success && res.data?.user) {
         const { user: createdUser, token, redirectTo } = res.data;
-        _persistUserSession(createdUser, token, redirectTo);
+        const targetRedirect = redirectTo || getRoleRedirect(createdUser.role);
+        _persistUserSession(createdUser, token, targetRedirect);
         return {
           success: true,
           user: createdUser,
-          redirectTo: redirectTo || (createdUser.role === 'officer' ? '/officer' : '/farmer'),
+          redirectTo: targetRedirect,
           message: res.message,
         };
       }

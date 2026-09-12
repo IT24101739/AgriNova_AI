@@ -53,7 +53,46 @@ DEMO_USERS = {
         },
         "redirectTo": "/officer",
     },
+    "lab@gmail.com": {
+        "password": "lab123",
+        "user": {
+            "id": "00000000-0000-0000-0000-000000000003",
+            "email": "lab@gmail.com",
+            "name": "National Pathology Research Lab",
+            "role": "lab",
+            "district": "Peradeniya Research Center",
+            "badge": "LAB-SL-01",
+            "phone": "0812388311",
+            "preferred_language": "en",
+        },
+        "redirectTo": "/lab",
+    },
+    "admin@gmail.com": {
+        "password": "admin123",
+        "user": {
+            "id": "00000000-0000-0000-0000-000000000004",
+            "email": "admin@gmail.com",
+            "name": "System Administrator",
+            "role": "admin",
+            "district": "Ministry HQ Colombo",
+            "badge": "SYS-ADMIN",
+            "phone": "0112872093",
+            "preferred_language": "en",
+        },
+        "redirectTo": "/admin",
+    },
 }
+
+
+def _role_redirect(role_name: str) -> str:
+    r = (role_name or "").lower()
+    if r == "officer":
+        return "/officer"
+    elif r == "lab":
+        return "/lab"
+    elif r == "admin":
+        return "/admin"
+    return "/farmer"
 
 
 # ── Pydantic Request Models ───────────────────────────────────────────────────
@@ -62,7 +101,7 @@ class SignupRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=150)
     email: str = Field(..., min_length=5, max_length=255)
     password: str = Field(..., min_length=6, max_length=100)
-    role: str = Field(default="farmer", pattern="^(farmer|officer)$")
+    role: str = Field(default="farmer", pattern="^(farmer|officer|lab|admin)$")
     district: Optional[str] = Field(default=None, max_length=100)
     phone: Optional[str] = Field(default=None, max_length=50)
     badge: Optional[str] = Field(default=None, max_length=100)
@@ -163,8 +202,7 @@ async def signup(body: SignupRequest, db: Session = Depends(get_db)):
         }).execute()
     except Exception as exc:
         logger.debug("Supabase public.users sync deferred: %s", exc)
-
-    redirect_to = "/officer" if role == "officer" else "/farmer"
+    redirect_to = _role_redirect(role)
 
     user_payload = {
         "id": str(user_id),
@@ -226,7 +264,7 @@ async def login(body: LoginRequest, db: Session = Depends(get_db)):
             u = sb_res.user
             meta = u.user_metadata or {}
             role = meta.get("role", "farmer").lower()
-            redirect_to = "/officer" if role == "officer" else "/farmer"
+            redirect_to = _role_redirect(role)
 
             user_payload = {
                 "id": u.id,
@@ -257,7 +295,7 @@ async def login(body: LoginRequest, db: Session = Depends(get_db)):
     local_user = db.query(User).filter(User.email == clean_email).first()
     if local_user:
         role = local_user.role.lower()
-        redirect_to = "/officer" if role == "officer" else "/farmer"
+        redirect_to = _role_redirect(role)
         user_payload = {
             "id": str(local_user.id),
             "email": local_user.email,

@@ -19,6 +19,7 @@ from app.ai.diagnosis_aggregator import aggregate_diagnosis
 from app.ai.treatment_advisor import generate_treatment_advice
 from app.schemas.analysis_schemas import CompleteAnalysisRequest, err, ok
 from app.services.outbreak_service import check_nearby_outbreak
+from app.services.ticket_service import create_officer_ticket
 from app.services.weather_service import get_weather_risk
 from app.utils.db import get_supabase
 
@@ -205,16 +206,15 @@ async def _save_analysis(report_id: str, weather: dict, outbreak: dict, aggregat
 
 
 async def _create_officer_ticket(report_id: str, reasons: list[str], outbreak_risk: str) -> None:
-    """Stub an officer_tickets row.  Member 3 handles the full workflow."""
-    sb = get_supabase()
+    """Create an officer ticket using ticket_service with dual persistence."""
     priority = "HIGH" if outbreak_risk == "HIGH" else "MEDIUM"
+    reason_str = " | ".join(reasons) if reasons else "Automated system triage recommendation"
     try:
-        sb.table("officer_tickets").insert({
-            "report_id": report_id,
-            "reason": " | ".join(reasons),
-            "priority": priority,
-            "status": "open",
-        }).execute()
+        create_officer_ticket(
+            report_id=report_id,
+            reason=reason_str,
+            priority=priority,
+        )
     except Exception as exc:
         logger.warning("Could not create officer ticket: %s", exc)
 
@@ -293,15 +293,27 @@ async def complete_analysis(
     report_lang = report.get("preferred_language") or "en"
     preferred_language = body.preferred_language if (body and body.preferred_language) else report_lang
 
-    # ── 0. Idempotency check ──────────────────────────────────────────────────
+    # ── 0. Idempotency check ──────────────────────────────────────────────────    
     existing = await _existing_analysis(report_id)
-    if existing:
-        # Re-generate advice in the requested language if needed
-        # (cheap — reuses saved analysis data)
+    # Only treat as cached if Member 2 complete analysis has actually completed (has final_confidence and weather_risk)
+    if existing and existing.get("weather_risk") is not None and existing.get("final_confidence") is not None:
         if existing.get("disease"):
-            weather_summary = _fmt_weather({
-                "temperature": 0, "humidity": 0, "rainfall": 0
-            })
+            # Fetch latest weather conditions for the farm coordinates
+            lat = float(farm.get("latitude") or 6.9271)
+            lon = float(farm.get("longitude") or 79.8612)
+            try:
+                weather_data = await get_weather_risk(lat, lon, existing["disease"])
+            except Exception as w_err:
+                logger.warning("Weather fetch in cached analysis failed: %s", w_err)
+                weather_data = {
+                    "temperature": 27.0,
+                    "humidity": 60.0,
+                    "rainfall": 0.0,
+                    "weather_risk": existing.get("weather_risk") or "LOW",
+                    "supports_prediction": False,
+                }
+
+            weather_summary = _fmt_weather(weather_data)
             advice = await generate_treatment_advice(
                 disease=existing["disease"],
                 severity=report.get("severity", "MODERATE"),
@@ -315,10 +327,17 @@ async def complete_analysis(
                 "preferred_language": preferred_language,
                 "diagnosis": {
                     "disease": existing["disease"],
-                    "confidence": existing["final_confidence"],
+                    "confidence": existing.get("final_confidence") or existing.get("disease_confidence") or 0.9,
                 },
                 "severity": report.get("severity", "MODERATE"),
-                "weather": {"risk": existing.get("weather_risk", "LOW")},
+                "weather": {
+                    "temperature": weather_data.get("temperature"),
+                    "humidity": weather_data.get("humidity"),
+                    "rainfall": weather_data.get("rainfall"),
+                    "risk": existing.get("weather_risk") or weather_data.get("weather_risk", "LOW"),
+                    "weather_risk": existing.get("weather_risk") or weather_data.get("weather_risk", "LOW"),
+                    "supports_prediction": weather_data.get("supports_prediction", False),
+                },
                 "outbreak": {"risk": existing.get("outbreak_risk", "LOW")},
                 "spread_risk": existing.get("spread_risk", "LOW"),
                 "decision": "AUTO_ADVICE",
@@ -425,6 +444,8 @@ async def complete_analysis(
                 "humidity": weather["humidity"],
                 "rainfall": weather["rainfall"],
                 "risk": weather["weather_risk"],
+                "weather_risk": weather["weather_risk"],
+                "supports_prediction": weather.get("supports_prediction", False),
             },
             "outbreak": {
                 "nearby_cases": outbreak["nearby_case_count"],

@@ -28,6 +28,10 @@ import FieldVisit from './pages/FieldVisit';
 import OutbreaksPage from './pages/OutbreaksPage';
 import AIFeedbackPage from './pages/AIFeedbackPage';
 
+// Research Lab & System Admin Pages
+import LabDashboard from './pages/LabDashboard';
+import AdminDashboard from './pages/AdminDashboard';
+
 /** Officer layout – sidebar + main content area with seamless header integration */
 function OfficerLayout() {
   return (
@@ -79,6 +83,26 @@ export default function App() {
               <Route path="outbreaks" element={<OutbreaksPage />} />
               <Route path="feedback" element={<AIFeedbackPage />} />
             </Route>
+
+            {/* ── Research Lab Console (Protected) ── */}
+            <Route
+              path="/lab"
+              element={
+                <ProtectedRoute requiredRole="lab">
+                  <LabDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ── System Admin Console (Protected) ── */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Route aliases for Officer convenience */}
             <Route path="/tickets" element={<Navigate to="/officer/tickets" replace />} />

@@ -14,7 +14,9 @@ import {
   ChevronRight,
   LogOut,
   Lock,
-  LayoutDashboard
+  LayoutDashboard,
+  Microscope,
+  Sliders
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -65,7 +67,7 @@ export default function Navbar() {
           {/* ── Brand Logo ── */}
           <div className="flex items-center gap-4">
             <Link
-              to={user ? (user.role === 'officer' ? '/officer' : '/farmer') : '/'}
+              to={user ? (user.role === 'officer' ? '/officer' : (user.role === 'lab' ? '/lab' : (user.role === 'admin' ? '/admin' : '/farmer'))) : '/'}
               className="flex items-center gap-2.5 group"
             >
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-green-400 p-[1px] shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 transition-all duration-300">
@@ -145,7 +147,7 @@ export default function Navbar() {
                 )}
               </NavLink>
             </nav>
-          ) : (
+          ) : user.role === 'officer' ? (
             /* 🛡️ Officer Navigation Links */
             <nav className="hidden md:flex items-center gap-1">
               <NavLink
@@ -218,6 +220,55 @@ export default function Navbar() {
                 AI Feedback
               </NavLink>
             </nav>
+          ) : user.role === 'lab' ? (
+            /* 🔬 Research Lab Navigation */
+            <nav className="hidden md:flex items-center gap-1">
+              <NavLink
+                to="/lab"
+                end
+                className={({ isActive }) =>
+                  `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
+                    isActive
+                      ? 'bg-purple-500/15 text-purple-400 border border-purple-500/25'
+                      : 'text-slate-300 hover:text-white hover:bg-white/5'
+                  }`
+                }
+              >
+                <Microscope className="w-3.5 h-3.5 text-purple-400" />
+                Pathology Diagnostic Lab
+              </NavLink>
+            </nav>
+          ) : (
+            /* ⚙️ System Admin Navigation */
+            <nav className="hidden md:flex items-center gap-1">
+              <NavLink
+                to="/admin"
+                end
+                className={({ isActive }) =>
+                  `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
+                    isActive
+                      ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25'
+                      : 'text-slate-300 hover:text-white hover:bg-white/5'
+                  }`
+                }
+              >
+                <Sliders className="w-3.5 h-3.5 text-amber-400" />
+                System Administration
+              </NavLink>
+              <NavLink
+                to="/officer/map"
+                className={({ isActive }) =>
+                  `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
+                    isActive
+                      ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25'
+                      : 'text-slate-300 hover:text-white hover:bg-white/5'
+                  }`
+                }
+              >
+                <Map className="w-3.5 h-3.5 text-amber-400" />
+                Surveillance Map
+              </NavLink>
+            </nav>
           )}
 
           {/* ── Right Actions & Profile ── */}
@@ -253,9 +304,13 @@ export default function Navbar() {
                   <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
                     user.role === 'officer'
                       ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                      : user.role === 'lab'
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                      : user.role === 'admin'
+                      ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                       : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                   }`}>
-                    {user.role === 'officer' ? 'AO' : '🌾'}
+                    {user.role === 'officer' ? 'AO' : (user.role === 'lab' ? '🔬' : (user.role === 'admin' ? '⚙️' : '🌾'))}
                   </div>
                   <div className="hidden md:block text-left">
                     <p className="text-[11px] font-bold text-white leading-none truncate max-w-[120px]">

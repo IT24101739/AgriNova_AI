@@ -69,23 +69,47 @@ export default function FieldVisitForm({ ticketId, onSuccess }) {
       {/* Severity */}
       <div>
         <label className="ag-label">Severity Level <span className="text-red-400">*</span></label>
-        <div className="flex gap-2">
-          {['LOW', 'MEDIUM', 'HIGH'].map(s => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setForm(f => ({ ...f, severity: s }))}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 border ${
-                form.severity === s
-                  ? s === 'HIGH'   ? 'bg-red-500/20 border-red-500/60 text-red-300'
-                  : s === 'MEDIUM' ? 'bg-amber-500/20 border-amber-500/60 text-amber-300'
-                  :                  'bg-green-500/20 border-green-500/60 text-green-300'
-                  : 'bg-white/5 border-white/10 text-slate-400 hover:border-white/20'
-              }`}
-            >
-              {s}
-            </button>
-          ))}
+        <div className="grid grid-cols-3 gap-2.5">
+          {[
+            { level: 'LOW', label: 'Low', desc: 'Mild / Local' },
+            { level: 'MEDIUM', label: 'Medium', desc: 'Moderate' },
+            { level: 'HIGH', label: 'High', desc: 'Severe / Urgent' },
+          ].map(({ level, label, desc }) => {
+            const active = form.severity === level;
+            const activeClasses =
+              level === 'HIGH'
+                ? 'border-red-500 bg-red-950/50 text-red-200 ring-2 ring-red-500/30 shadow-md shadow-red-950/40'
+                : level === 'MEDIUM'
+                ? 'border-amber-500 bg-amber-950/50 text-amber-200 ring-2 ring-amber-500/30 shadow-md shadow-amber-950/40'
+                : 'border-emerald-500 bg-emerald-950/50 text-emerald-200 ring-2 ring-emerald-500/30 shadow-md shadow-emerald-950/40';
+
+            return (
+              <button
+                key={level}
+                type="button"
+                onClick={() => setForm(f => ({ ...f, severity: level }))}
+                className={`py-2 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 border flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
+                  active
+                    ? activeClasses
+                    : 'bg-[#092215]/50 border-white/10 text-slate-400 hover:border-emerald-500/30 hover:text-slate-200 hover:bg-white/5'
+                }`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${
+                    active
+                      ? level === 'HIGH'
+                        ? 'bg-red-400 animate-pulse'
+                        : level === 'MEDIUM'
+                        ? 'bg-amber-400'
+                        : 'bg-emerald-400'
+                      : 'bg-slate-600'
+                  }`} />
+                  <span>{label}</span>
+                </div>
+                <span className="text-[10px] font-normal normal-case opacity-75">{desc}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
