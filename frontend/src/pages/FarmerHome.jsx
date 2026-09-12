@@ -27,8 +27,13 @@ import {
   Trash2,
   CheckSquare,
   Square,
-  AlertTriangle
+  AlertTriangle,
+  Pencil,
+  Save,
+  X,
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 import { useAuth } from '../context/AuthContext';
 
 export default function FarmerHome() {
@@ -41,6 +46,9 @@ export default function FarmerHome() {
   const [selectedReportIds, setSelectedReportIds] = useState(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
+  const [editingReport, setEditingReport] = useState(null);
+  const [editDescription, setEditDescription] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const fetchReports = async () => {
     setLoading(true);
@@ -138,6 +146,29 @@ export default function FarmerHome() {
       alert('Failed to delete selected reports. Please try again.');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleEditReport = async () => {
+    if (!editingReport) return;
+    setIsSavingEdit(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/reports/${editingReport.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: editDescription }),
+      });
+      if (res.ok) {
+        setReports(prev => prev.map(r => r.id === editingReport.id ? { ...r, description: editDescription } : r));
+        setActionMessage('Report description updated.');
+        setTimeout(() => setActionMessage(''), 3500);
+        setEditingReport(null);
+      }
+    } catch (err) {
+      console.error('Failed to edit report:', err);
+      alert('Failed to update report. Please try again.');
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -642,13 +673,27 @@ export default function FarmerHome() {
           {!loading && reports.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {reports.map((report) => (
-                <ReportCard
-                  key={report.id}
-                  report={report}
-                  isSelected={selectedReportIds.has(report.id)}
-                  onToggleSelect={handleToggleSelect}
-                  onDelete={handleDeleteSingle}
-                />
+                <div key={report.id} className="relative group/card">
+                  <ReportCard
+                    report={report}
+                    isSelected={selectedReportIds.has(report.id)}
+                    onToggleSelect={handleToggleSelect}
+                    onDelete={handleDeleteSingle}
+                  />
+                  {/* Edit description button */}
+                  <button
+                    type="button"
+                    title="Edit report description"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingReport(report);
+                      setEditDescription(report.description || '');
+                    }}
+                    className="absolute bottom-3 right-10 p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/15 transition-colors opacity-0 group-hover/card:opacity-100 z-10"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -733,6 +778,66 @@ export default function FarmerHome() {
         </section>
 
       </main>
+
+      {/* ── Edit Report Description Modal ── */}
+      {editingReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="glass-card max-w-md w-full rounded-2xl p-6 border border-emerald-500/30 shadow-2xl space-y-4 bg-[#05130b]/95">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                  <Pencil className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Edit Report Description</h3>
+                  <p className="text-[10px] text-slate-400 font-mono">{editingReport.crop} — {editingReport.disease || 'Scan'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingReport(null)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Description / Notes</label>
+              <textarea
+                rows={4}
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Add notes about this scan — symptoms observed, field location, date of onset..."
+                className="w-full px-3.5 py-2.5 rounded-xl bg-black/40 border border-emerald-500/25 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/60 resize-none"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setEditingReport(null)}
+                className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-slate-300 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditReport}
+                disabled={isSavingEdit}
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-xs font-bold text-white transition-all shadow-lg flex items-center justify-center gap-2"
+              >
+                {isSavingEdit ? (
+                  <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Save Description
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

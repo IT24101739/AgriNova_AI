@@ -8,7 +8,10 @@ import PriorityBadge from '../components/PriorityBadge';
 import {
   ArrowLeft, Bot, CheckCircle, AlertCircle, Loader2,
   ClipboardList, MapPin, Calendar, RefreshCw, ChevronDown,
+  Trash2, CheckCheck,
 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 const DISEASES = [
   'Tomato Early Blight','Tomato Late Blight','Tomato Leaf Curl',
@@ -77,6 +80,7 @@ export default function OfficerTicket() {
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
+  const [deletingVisitId, setDeletingVisitId] = useState(null);
 
   const fetch = async () => {
     try {
@@ -111,7 +115,22 @@ export default function OfficerTicket() {
 
   const handleStatusChange = async (status) => {
     await patchTicket(ticketId, { status });
+    if (status === 'RESOLVED') setSuccessMsg('Ticket marked as Resolved.');
     fetch();
+  };
+
+  const handleDeleteFieldVisit = async (visitId) => {
+    if (!window.confirm('Delete this field visit record?')) return;
+    setDeletingVisitId(visitId);
+    try {
+      await fetch(`${API_BASE}/api/officer/field-visits/${visitId}`, { method: 'DELETE' });
+      setSuccessMsg('Field visit deleted.');
+      fetch();
+    } catch (err) {
+      console.error('Delete field visit error:', err);
+    } finally {
+      setDeletingVisitId(null);
+    }
   };
 
   if (loading) return (
@@ -220,6 +239,15 @@ export default function OfficerTicket() {
               </button>
             );
           })}
+
+          {/* Mark Resolved button */}
+          <button
+            onClick={() => handleStatusChange('RESOLVED')}
+            className="ml-auto flex items-center gap-1.5 text-xs py-1.5 px-3 rounded-xl font-bold bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-600 hover:to-teal-600 text-white shadow-md transition-all"
+          >
+            <CheckCheck className="w-3.5 h-3.5" />
+            Mark Resolved
+          </button>
         </div>
       )}
 
@@ -340,13 +368,30 @@ export default function OfficerTicket() {
           {/* Past field visits */}
           {fieldVisits.length > 0 && (
             <div className="glass rounded-2xl p-5">
-              <h2 className="text-sm font-semibold text-white mb-4">Past Field Visits</h2>
+              <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                Past Field Visits
+                <span className="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
+                  {fieldVisits.length} record{fieldVisits.length !== 1 ? 's' : ''}
+                </span>
+              </h2>
               <div className="space-y-3">
                 {fieldVisits.map(fv => (
                   <div key={fv.id} className="glass-elevated rounded-xl p-3 text-sm space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-white">{fv.confirmed_disease}</span>
-                      <span className="text-xs text-slate-400">{fv.visit_date}</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <span className="font-semibold text-white">{fv.confirmed_disease}</span>
+                        <span className="text-xs text-slate-400 ml-3">{fv.visit_date}</span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteFieldVisit(fv.id)}
+                        disabled={deletingVisitId === fv.id}
+                        title="Delete field visit"
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors flex-shrink-0"
+                      >
+                        {deletingVisitId === fv.id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
                     </div>
                     <p className="text-xs text-slate-400">{fv.observations}</p>
                     {fv.action_taken && (

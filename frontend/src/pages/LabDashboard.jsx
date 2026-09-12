@@ -15,10 +15,13 @@ import {
   X,
   Sparkles,
   Info,
-  MapPin
+  MapPin,
+  Trash2,
+  Pencil,
+  Loader2
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 const COMMON_PATHOGENS = [
   'Tomato Early Blight (Alternaria solani)',
@@ -45,6 +48,7 @@ export default function LabDashboard() {
   const [labNotes, setLabNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successToast, setSuccessToast] = useState('');
+  const [cancellingId, setCancellingId] = useState(null);
 
   const fetchLabRequests = async () => {
     setLoading(true);
@@ -70,18 +74,34 @@ export default function LabDashboard() {
     fetchLabRequests();
   }, []);
 
-  const handleUpdateStatus = async (requestId, newStatus) => {
+  const handleUpdateStatus = async (reqId, newStatus) => {
     try {
-      const res = await fetch(`${API_BASE}/api/officer/lab-requests/${requestId}/status?status=${newStatus}`, {
+      await fetch(`${API_BASE}/api/officer/lab-requests/${reqId}/status`, {
         method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
       });
-      if (res.ok) {
-        setSuccessToast(`Sample marked as ${newStatus}.`);
-        setTimeout(() => setSuccessToast(''), 4000);
-        fetchLabRequests();
-      }
+      setSuccessToast(`Status updated to ${newStatus}`);
+      setTimeout(() => setSuccessToast(''), 4000);
+      fetchLabRequests();
     } catch (err) {
       console.error('Failed to update status:', err);
+    }
+  };
+
+  const handleCancelReferral = async (reqId) => {
+    if (!window.confirm('Cancel this lab referral? This cannot be undone.')) return;
+    setCancellingId(reqId);
+    try {
+      await fetch(`${API_BASE}/api/officer/lab-requests/${reqId}`, { method: 'DELETE' });
+      setSuccessToast('Lab referral cancelled.');
+      setTimeout(() => setSuccessToast(''), 4000);
+      fetchLabRequests();
+    } catch (err) {
+      console.error('Cancel referral error:', err);
+      alert('Failed to cancel referral.');
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -468,11 +488,33 @@ export default function LabDashboard() {
                       </button>
                     )}
 
+                    {/* Edit Result — reopen modal pre-filled for completed cards */}
                     {isCompleted && (
-                      <div className="w-full text-center py-2 px-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center justify-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Diagnostic Certificate Issued & Synchronized</span>
-                      </div>
+                      <button
+                        onClick={() => {
+                          setActiveModalRequest(req);
+                          setConfirmedDisease(req.confirmed_disease || '');
+                          setLabNotes(req.lab_notes || '');
+                        }}
+                        className="flex-1 py-2 px-3 rounded-xl bg-purple-600/20 hover:bg-purple-600/35 border border-purple-500/40 text-purple-200 text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        Edit Result
+                      </button>
+                    )}
+
+                    {/* Cancel Referral — only for pending/non-completed */}
+                    {!isCompleted && (
+                      <button
+                        onClick={() => handleCancelReferral(req.id)}
+                        disabled={cancellingId === req.id}
+                        title="Cancel referral"
+                        className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-red-400 hover:text-red-300 transition-colors"
+                      >
+                        {cancellingId === req.id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
                     )}
                   </div>
                 </div>

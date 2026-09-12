@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PriorityBadge from './PriorityBadge';
-import { ArrowUpDown, ChevronRight } from 'lucide-react';
+import { ArrowUpDown, ChevronRight, Trash2, Loader2 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 const STATUS_PILL = {
   OPEN:                 'bg-slate-700/60 text-slate-300',
@@ -13,10 +15,11 @@ const STATUS_PILL = {
   RESOLVED:             'bg-slate-600/40 text-slate-400',
 };
 
-export default function TicketTable({ tickets = [], loading }) {
+export default function TicketTable({ tickets = [], loading, onDeleted }) {
   const navigate = useNavigate();
   const [sortKey, setSortKey] = useState('created_at');
   const [sortAsc, setSortAsc] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const sorted = [...tickets].sort((a, b) => {
     const va = sortKey === 'confidence'
@@ -31,6 +34,21 @@ export default function TicketTable({ tickets = [], loading }) {
   const toggleSort = (key) => {
     if (sortKey === key) setSortAsc(a => !a);
     else { setSortKey(key); setSortAsc(false); }
+  };
+
+  const handleDelete = async (e, ticketId) => {
+    e.stopPropagation();
+    if (!window.confirm('Delete this ticket? This cannot be undone.')) return;
+    setDeletingId(ticketId);
+    try {
+      await fetch(`${API_BASE}/api/officer/tickets/${ticketId}`, { method: 'DELETE' });
+      onDeleted?.(ticketId);
+    } catch (err) {
+      console.error('Delete ticket error:', err);
+      alert('Failed to delete ticket. Please try again.');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const Th = ({ col, label }) => (
@@ -76,7 +94,7 @@ export default function TicketTable({ tickets = [], loading }) {
             <Th col="status" label="Status" />
             <Th col="confidence" label="AI Conf." />
             <Th col="created_at" label="Date" />
-            <th />
+            <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-widest text-slate-400">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -114,8 +132,26 @@ export default function TicketTable({ tickets = [], loading }) {
                     day: '2-digit', month: 'short', year: 'numeric',
                   })}
                 </td>
-                <td>
-                  <ChevronRight className="w-4 h-4 text-slate-600" />
+                <td onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => navigate(`/officer/tickets/${ticket.id}`)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                      title="View ticket"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => handleDelete(e, ticket.id)}
+                      disabled={deletingId === ticket.id}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors"
+                      title="Delete ticket"
+                    >
+                      {deletingId === ticket.id
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <Trash2 className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </td>
               </tr>
             );

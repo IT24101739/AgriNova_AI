@@ -17,14 +17,19 @@ import {
   TrendingUp,
   Cpu,
   Eye,
-  Sliders
+  Sliders,
+  Trash2,
+  Pencil,
+  Save,
+  Loader2,
+  X,
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('feedback'); // 'feedback' | 'outbreaks' | 'users' | 'guidance'
+  const [activeTab, setActiveTab] = useState('feedback');
 
   // Data states
   const [feedbackList, setFeedbackList] = useState([]);
@@ -34,6 +39,16 @@ export default function AdminDashboard() {
   const [guidanceList, setGuidanceList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
+
+  // Action states
+  const [deletingUserId, setDeletingUserId] = useState(null);
+  const [editingUser, setEditingUser] = useState(null); // { id, role }
+  const [editingUserRole, setEditingUserRole] = useState('');
+  const [savingUserRole, setSavingUserRole] = useState(false);
+  const [deletingGuidanceIdx, setDeletingGuidanceIdx] = useState(null);
+  const [editingGuidance, setEditingGuidance] = useState(null);
+  const [deletingFeedbackId, setDeletingFeedbackId] = useState(null);
+  const [revokingOutbreakId, setRevokingOutbreakId] = useState(null);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -131,6 +146,92 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       alert(`Error rejecting outbreak: ${err.message}`);
+    }
+  };
+
+  const handleRevokeConfirmedOutbreak = async (id) => {
+    if (!window.confirm('Revoke this confirmed outbreak alert? Farmers will no longer receive warnings for this zone.')) return;
+    setRevokingOutbreakId(id);
+    try {
+      const res = await fetch(`${API_BASE}/api/officer/outbreaks/${id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'Revoked by System Administrator' }),
+      });
+      if (res.ok) {
+        setActionMessage('Outbreak alert revoked.');
+        setTimeout(() => setActionMessage(''), 4000);
+        fetchDashboardData();
+      }
+    } catch (err) {
+      alert(`Error revoking outbreak: ${err.message}`);
+    } finally {
+      setRevokingOutbreakId(null);
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm('Permanently delete this user account? This cannot be undone.')) return;
+    setDeletingUserId(userId);
+    try {
+      await fetch(`${API_BASE}/api/admin/users/${userId}`, { method: 'DELETE' });
+      setUsersList(prev => prev.filter(u => u.id !== userId));
+      setActionMessage('User account deleted.');
+      setTimeout(() => setActionMessage(''), 4000);
+    } catch (err) {
+      alert(`Error deleting user: ${err.message}`);
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
+
+  const handleSaveUserRole = async () => {
+    if (!editingUser) return;
+    setSavingUserRole(true);
+    try {
+      await fetch(`${API_BASE}/api/admin/users/${editingUser.id}/role`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: editingUserRole }),
+      });
+      setUsersList(prev => prev.map(u => u.id === editingUser.id ? { ...u, role: editingUserRole } : u));
+      setActionMessage(`Role updated to ${editingUserRole}.`);
+      setTimeout(() => setActionMessage(''), 4000);
+      setEditingUser(null);
+    } catch (err) {
+      alert(`Error updating role: ${err.message}`);
+    } finally {
+      setSavingUserRole(false);
+    }
+  };
+
+  const handleDeleteGuidance = async (idx, ruleId) => {
+    if (!window.confirm('Delete this treatment rule?')) return;
+    setDeletingGuidanceIdx(idx);
+    try {
+      if (ruleId) await fetch(`${API_BASE}/api/admin/guidance/${ruleId}`, { method: 'DELETE' });
+      setGuidanceList(prev => prev.filter((_, i) => i !== idx));
+      setActionMessage('Treatment rule deleted.');
+      setTimeout(() => setActionMessage(''), 4000);
+    } catch (err) {
+      alert(`Error deleting rule: ${err.message}`);
+    } finally {
+      setDeletingGuidanceIdx(null);
+    }
+  };
+
+  const handleDeleteFeedback = async (feedbackId, idx) => {
+    if (!window.confirm('Delete this feedback record?')) return;
+    setDeletingFeedbackId(feedbackId || idx);
+    try {
+      if (feedbackId) await fetch(`${API_BASE}/api/ai-feedback/${feedbackId}`, { method: 'DELETE' });
+      setFeedbackList(prev => prev.filter((_, i) => i !== idx));
+      setActionMessage('Feedback record deleted.');
+      setTimeout(() => setActionMessage(''), 4000);
+    } catch (err) {
+      alert(`Error deleting feedback: ${err.message}`);
+    } finally {
+      setDeletingFeedbackId(null);
     }
   };
 
@@ -289,14 +390,14 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
+                <table className="w-fu                   <thead>
                     <tr className="border-b border-white/10 text-slate-400 text-[11px] uppercase tracking-wider font-semibold">
                       <th className="py-3 px-3">Report Ref</th>
                       <th className="py-3 px-3">Evaluator</th>
                       <th className="py-3 px-3">Validation Result</th>
                       <th className="py-3 px-3">Field Observations</th>
                       <th className="py-3 px-3">Timestamp</th>
+                      <th className="py-3 px-3">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -340,8 +441,21 @@ export default function AdminDashboard() {
                           <td className="py-3 px-3 text-slate-400 font-mono text-[11px]">
                             {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Recent'}
                           </td>
+                          <td className="py-3 px-3">
+                            <button
+                              onClick={() => handleDeleteFeedback(item.id, idx)}
+                              disabled={deletingFeedbackId === (item.id || idx)}
+                              title="Delete feedback"
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors"
+                            >
+                              {deletingFeedbackId === (item.id || idx)
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <Trash2 className="w-3.5 h-3.5" />}
+                            </button>
+                          </td>
                         </tr>
                       );
+                    })}             );
                     })}
                   </tbody>
                 </table>
@@ -440,7 +554,7 @@ export default function AdminDashboard() {
                       key={out.id}
                       className="p-4 rounded-xl bg-red-950/30 border border-red-500/40 space-y-2 text-xs"
                     >
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center gap-2">
                         <span className="font-bold text-white">{out.disease}</span>
                         <span className="text-[10px] font-mono text-red-300 bg-red-900/60 px-2 py-0.5 rounded border border-red-500/30">
                           {out.radius_km} km Quarantine
@@ -450,6 +564,16 @@ export default function AdminDashboard() {
                       <p className="text-[11px] text-slate-400 font-mono">
                         Center: {out.latitude?.toFixed(4)}, {out.longitude?.toFixed(4)}
                       </p>
+                      <button
+                        onClick={() => handleRevokeConfirmedOutbreak(out.id)}
+                        disabled={revokingOutbreakId === out.id}
+                        className="w-full mt-2 py-1.5 px-3 rounded-lg bg-red-600/20 hover:bg-red-600/35 border border-red-500/40 text-red-300 text-[11px] font-bold transition-all flex items-center justify-center gap-1.5"
+                      >
+                        {revokingOutbreakId === out.id
+                          ? <Loader2 className="w-3 h-3 animate-spin" />
+                          : <Trash2 className="w-3 h-3" />}
+                        Revoke Alert
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -480,6 +604,7 @@ export default function AdminDashboard() {
                     <th className="py-3 px-3">Email</th>
                     <th className="py-3 px-3">District / Station</th>
                     <th className="py-3 px-3">Badge ID</th>
+                    <th className="py-3 px-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -495,23 +620,77 @@ export default function AdminDashboard() {
                     <tr key={u.id || i} className="hover:bg-white/[0.02]">
                       <td className="py-3 px-3 font-semibold text-white">{u.name}</td>
                       <td className="py-3 px-3">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                            u.role === 'farmer'
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                              : u.role === 'officer'
-                              ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                              : u.role === 'lab'
-                              ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                              : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                          }`}
-                        >
-                          {u.role}
-                        </span>
+                        {editingUser?.id === u.id ? (
+                          <select
+                            value={editingUserRole}
+                            onChange={e => setEditingUserRole(e.target.value)}
+                            className="bg-black/60 border border-blue-500/40 text-blue-200 text-[11px] rounded-lg px-2 py-1 focus:outline-none"
+                            autoFocus
+                          >
+                            {['farmer','officer','lab','admin'].map(r => (
+                              <option key={r} value={r}>{r}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              u.role === 'farmer'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : u.role === 'officer'
+                                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                : u.role === 'lab'
+                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                            }`}
+                          >
+                            {u.role}
+                          </span>
+                        )}
                       </td>
                       <td className="py-3 px-3 font-mono text-slate-300">{u.email}</td>
                       <td className="py-3 px-3 text-slate-300">{u.district || 'National'}</td>
                       <td className="py-3 px-3 font-mono text-slate-400">{u.badge || 'N/A'}</td>
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-1.5">
+                          {editingUser?.id === u.id ? (
+                            <>
+                              <button
+                                onClick={handleSaveUserRole}
+                                disabled={savingUserRole}
+                                className="p-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 transition-colors"
+                                title="Save role"
+                              >
+                                {savingUserRole ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                              </button>
+                              <button
+                                onClick={() => setEditingUser(null)}
+                                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 transition-colors"
+                                title="Cancel"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => { setEditingUser(u); setEditingUserRole(u.role); }}
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/15 transition-colors"
+                              title="Edit role"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {u.id && (
+                            <button
+                              onClick={() => handleDeleteUser(u.id)}
+                              disabled={deletingUserId === u.id}
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors"
+                              title="Delete user"
+                            >
+                              {deletingUserId === u.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -571,11 +750,23 @@ export default function AdminDashboard() {
                   key={idx}
                   className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2.5 text-xs shadow-lg"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="font-bold text-white text-sm">{rule.disease}</span>
-                    <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold text-[10px]">
-                      {rule.crop}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold text-[10px]">
+                        {rule.crop}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteGuidance(idx, rule.id)}
+                        disabled={deletingGuidanceIdx === idx}
+                        title="Delete rule"
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors"
+                      >
+                        {deletingGuidanceIdx === idx
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-1.5 pt-1">
