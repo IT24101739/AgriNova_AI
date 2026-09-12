@@ -390,7 +390,8 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-fu                   <thead>
+                <table className="w-full text-left border-collapse">
+                  <thead>
                     <tr className="border-b border-white/10 text-slate-400 text-[11px] uppercase tracking-wider font-semibold">
                       <th className="py-3 px-3">Report Ref</th>
                       <th className="py-3 px-3">Evaluator</th>
@@ -455,7 +456,6 @@ export default function AdminDashboard() {
                           </td>
                         </tr>
                       );
-                    })}             );
                     })}
                   </tbody>
                 </table>
