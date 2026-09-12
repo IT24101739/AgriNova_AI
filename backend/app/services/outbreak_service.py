@@ -1,12 +1,5 @@
 """
-outbreak_service.py – Dev 2
-
-Scans the shared `reports` table for nearby same-disease / same-crop reports
-within a configurable radius and time window. Uses the Haversine formula —
-no PostGIS extension required.
-
-All thresholds are configurable via environment variables.
-NO LLM is involved here – fully deterministic.
+Outbreak Service — Combined Dev 2 (Advisory Scan) & Dev 3 (Officer Outbreak Management)
 """
 
 from __future__ import annotations
@@ -14,25 +7,28 @@ from __future__ import annotations
 import logging
 import math
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from app.utils.db import get_supabase
+from app.database import get_supabase
+from app.services.notification_service import notify_outbreak_alert
 
 logger = logging.getLogger(__name__)
 
-# ── Configurable thresholds ───────────────────────────────────────────────────
-RADIUS_KM: float = float(os.getenv("OUTBREAK_RADIUS_KM", "5.0"))
-WINDOW_DAYS: int = int(os.getenv("OUTBREAK_WINDOW_DAYS", "7"))
+# Configurable thresholds
+RADIUS_KM: float = float(os.getenv("OUTBREAK_RADIUS_KM", "25.0"))
+WINDOW_DAYS: int = int(os.getenv("OUTBREAK_WINDOW_DAYS", "14"))
+OUTBREAK_RADIUS_KM = RADIUS_KM
+OUTBREAK_MIN_REPORTS: int = int(os.getenv("OUTBREAK_MIN_REPORTS", "3"))
+OUTBREAK_WINDOW_DAYS = WINDOW_DAYS
 THRESHOLD_MEDIUM: int = int(os.getenv("OUTBREAK_MEDIUM_THRESHOLD", "1"))
 THRESHOLD_HIGH: int = int(os.getenv("OUTBREAK_HIGH_THRESHOLD", "3"))
 
 
-# ── Haversine ─────────────────────────────────────────────────────────────────
-
 def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Great-circle distance in km between two WGS-84 coordinates."""
-    R = 6_371.0
+    R = 6371.0
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
     dlambda = math.radians(lon2 - lon1)
@@ -40,20 +36,18 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         math.sin(dphi / 2) ** 2
         + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
     )
-    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return 2 * R * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-
-# ── Risk scoring ──────────────────────────────────────────────────────────────
 
 def _score(count: int) -> str:
     if count == 0:
         return "LOW"
-    if count <= THRESHOLD_MEDIUM + 1:   # 1-2  → MEDIUM
+    if count <= THRESHOLD_MEDIUM + 1:
         return "MEDIUM"
-    return "HIGH"                        # 3+   → HIGH
+    return "HIGH"
 
 
-# ── Main function ─────────────────────────────────────────────────────────────
+# ── Dev 2: Farmer Advisory Nearby Scan ───────────────────────────────────────
 
 async def check_nearby_outbreak(
     report_id: str,
@@ -64,33 +58,13 @@ async def check_nearby_outbreak(
     radius_km: float = RADIUS_KM,
     window_days: int = WINDOW_DAYS,
 ) -> Dict[str, Any]:
-    """
-    Find recent reports with matching crop + disease within *radius_km*.
-
-    Args:
-        report_id:          The current report being analysed (excluded from results).
-        latitude / longitude: Farm coordinates.
-        crop:               Crop type (must match DB value exactly).
-        predicted_disease:  Disease string from Member 1's classifier.
-        radius_km:          Search radius (km).
-        window_days:        How many past days to look back.
-
-    Returns:
-        {
-            "nearby_case_count":   int,
-            "radius_km":           float,
-            "outbreak_risk":       "LOW" | "MEDIUM" | "HIGH",
-            "matching_report_ids": [str, ...],
-        }
-    """
+    """Find recent reports with matching crop + disease within radius_km."""
     supabase = get_supabase()
     cutoff = (
         datetime.now(tz=timezone.utc) - timedelta(days=window_days)
     ).isoformat()
 
     try:
-        # Pull candidate rows – filter on disease + crop server-side to keep
-        # the result set small before Haversine filtering in Python.
         result = (
             supabase.table("reports")
             .select("id, disease, crop, created_at, farms(latitude, longitude)")
@@ -129,3 +103,206 @@ async def check_nearby_outbreak(
         "outbreak_risk": _score(count),
         "matching_report_ids": matching_ids,
     }
+
+
+# ── Dev 3: Officer Outbreak Management & Map ─────────────────────────────────
+
+def detect_outbreak_candidates() -> list[dict[str, Any]]:
+    """Scans recent reports and creates CANDIDATE outbreak rows where clusters exist."""
+    db = get_supabase()
+    cutoff = (datetime.utcnow() - timedelta(days=OUTBREAK_WINDOW_DAYS)).isoformat()
+
+    reports_raw = (
+        db.table("reports")
+        .select("id, disease, crop, confidence, severity, created_at, farms(latitude, longitude, district)")
+        .gte("created_at", cutoff)
+        .not_.is_("disease", "null")
+        .execute()
+        .data
+    )
+
+    groups: dict[str, list[dict]] = {}
+    for r in (reports_raw or []):
+        farm = r.get("farms") or {}
+        lat = farm.get("latitude")
+        lon = farm.get("longitude")
+        if lat is None or lon is None:
+            continue
+        key = f"{r['disease']}|{r['crop']}"
+        groups.setdefault(key, []).append({**r, "_lat": float(lat), "_lon": float(lon)})
+
+    new_candidates = []
+    for key, group in groups.items():
+        if len(group) < OUTBREAK_MIN_REPORTS:
+            continue
+
+        cluster_center_lat = sum(r["_lat"] for r in group) / len(group)
+        cluster_center_lon = sum(r["_lon"] for r in group) / len(group)
+        close_pairs = 0
+        for i in range(len(group)):
+            for j in range(i + 1, len(group)):
+                d = _haversine_km(
+                    group[i]["_lat"], group[i]["_lon"],
+                    group[j]["_lat"], group[j]["_lon"],
+                )
+                if d <= OUTBREAK_RADIUS_KM:
+                    close_pairs += 1
+                    if close_pairs >= 2:
+                        break
+            if close_pairs >= 2:
+                break
+
+        if close_pairs < 2:
+            continue
+
+        disease, crop = key.split("|", 1)
+
+        existing = (
+            db.table("outbreaks")
+            .select("id, status")
+            .eq("disease", disease)
+            .eq("crop", crop)
+            .in_("status", ["CANDIDATE", "CONFIRMED"])
+            .execute()
+            .data
+        )
+        if existing:
+            continue
+
+        avg_confidence = sum(r.get("confidence") or 0 for r in group) / len(group)
+        payload = {
+            "id": str(uuid.uuid4()),
+            "disease": disease,
+            "crop": crop,
+            "latitude": cluster_center_lat,
+            "longitude": cluster_center_lon,
+            "radius_km": OUTBREAK_RADIUS_KM,
+            "status": "CANDIDATE",
+            "report_count": len(group),
+            "avg_confidence": round(avg_confidence, 3),
+            "created_at": datetime.utcnow().isoformat(),
+        }
+        result = db.table("outbreaks").insert(payload).execute()
+        new_candidates.append(result.data[0])
+        logger.info("New outbreak candidate: %s %s (%d reports)", disease, crop, len(group))
+
+    return new_candidates
+
+
+def get_outbreak_candidates() -> list[dict[str, Any]]:
+    db = get_supabase()
+    return (
+        db.table("outbreaks")
+        .select("*")
+        .in_("status", ["CANDIDATE"])
+        .order("created_at", desc=True)
+        .execute()
+        .data
+    )
+
+
+def get_confirmed_outbreaks() -> list[dict[str, Any]]:
+    db = get_supabase()
+    return (
+        db.table("outbreaks")
+        .select("*")
+        .eq("status", "CONFIRMED")
+        .order("confirmed_at", desc=True)
+        .execute()
+        .data
+    )
+
+
+def confirm_outbreak(
+    outbreak_id: str,
+    *,
+    radius_km: Optional[float] = None,
+    notes: Optional[str] = None,
+) -> dict[str, Any]:
+    db = get_supabase()
+    outbreak = (
+        db.table("outbreaks").select("*").eq("id", outbreak_id).single().execute().data
+    )
+    if not outbreak:
+        raise ValueError(f"Outbreak {outbreak_id} not found")
+
+    effective_radius = radius_km or outbreak.get("radius_km") or OUTBREAK_RADIUS_KM
+    disease = outbreak["disease"]
+    crop = outbreak["crop"]
+    center_lat = float(outbreak["latitude"])
+    center_lon = float(outbreak["longitude"])
+
+    db.table("outbreaks").update(
+        {
+            "status": "CONFIRMED",
+            "radius_km": effective_radius,
+            "confirmed_at": datetime.utcnow().isoformat(),
+            "notes": notes,
+        }
+    ).eq("id", outbreak_id).execute()
+
+    farms = (
+        db.table("farms")
+        .select("id, farmer_id, latitude, longitude, crop")
+        .eq("crop", crop)
+        .execute()
+        .data
+    )
+
+    notified = 0
+    for farm in (farms or []):
+        lat = farm.get("latitude")
+        lon = farm.get("longitude")
+        farmer_id = farm.get("farmer_id")
+        if not all([lat, lon, farmer_id]):
+            continue
+        dist = _haversine_km(center_lat, center_lon, float(lat), float(lon))
+        if dist <= effective_radius:
+            try:
+                notify_outbreak_alert(
+                    farmer_id=farmer_id,
+                    disease=disease,
+                    crop=crop,
+                )
+                notified += 1
+            except Exception as exc:
+                logger.warning("Failed to notify farmer %s: %s", farmer_id, exc)
+
+    logger.info("Outbreak %s confirmed — notified %d farmers", outbreak_id, notified)
+    return {"outbreak_id": outbreak_id, "status": "CONFIRMED", "farmers_notified": notified}
+
+
+def reject_outbreak(outbreak_id: str, reason: Optional[str] = None) -> dict[str, Any]:
+    db = get_supabase()
+    db.table("outbreaks").update(
+        {"status": "REJECTED", "notes": reason, "updated_at": datetime.utcnow().isoformat()}
+    ).eq("id", outbreak_id).execute()
+    return {"outbreak_id": outbreak_id, "status": "REJECTED"}
+
+
+def get_map_reports(
+    crop: Optional[str] = None,
+    disease: Optional[str] = None,
+    severity: Optional[str] = None,
+    status: Optional[str] = None,
+) -> list[dict[str, Any]]:
+    """Geo-tagged reports for the regional map."""
+    db = get_supabase()
+    q = (
+        db.table("reports")
+        .select(
+            "id, crop, disease, confidence, severity, spread_risk, status, created_at, "
+            "farms(latitude, longitude, district)"
+        )
+        .not_.is_("farms.latitude", "null")
+    )
+    if crop:
+        q = q.eq("crop", crop)
+    if disease:
+        q = q.eq("disease", disease)
+    if severity:
+        q = q.eq("severity", severity)
+    if status:
+        q = q.eq("status", status)
+
+    return q.execute().data

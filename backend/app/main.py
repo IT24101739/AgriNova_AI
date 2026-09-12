@@ -1,27 +1,28 @@
 """
 AgriShield — FastAPI Application Entry Point
 
-Startup sequence:
-  1. Load AI models (disease classifier) — once, at lifespan start
-  2. Mount CORS middleware
-  3. Include routers:
-     - Feature Slice 1 (Member 1): Farmer crop image upload & classification
-     - Feature Slice 2 (Member 2): Smart diagnosis, weather, outbreak, advisory
-
-Run with: uvicorn app.main:app --reload --port 8000
+Combines all 3 Feature Slices:
+  - Feature Slice 1 (Member 1): Farmer crop image upload & classification
+  - Feature Slice 2 (Member 2): Smart diagnosis, weather, advisory & severity estimation
+  - Feature Slice 3 (Member 3): Officer Dashboard, low-confidence ticket management, map, visits & AI assistant
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+load_dotenv()
 
 from app.config import get_settings
 from app.routers import reports
 from app.routers.analysis import router as analysis_router
 from app.routers.weather import router as weather_router
 from app.routers.additional_image import router as additional_image_router
+from app.routers import officer, shared
 from app.ai.disease_classifier import get_classifier
 
 logging.basicConfig(
@@ -32,14 +33,9 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
-# ---------------------------------------------------------------------------
-# Lifespan: load AI models on startup
-# ---------------------------------------------------------------------------
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load heavy resources (AI models) once on startup."""
-    # Clear settings cache so .env is always fresh on restart
     get_settings.cache_clear()
     logger.info("🌱 AgriShield backend starting up...")
     try:
@@ -47,32 +43,25 @@ async def lifespan(app: FastAPI):
         classifier.load()
     except Exception as e:
         logger.error(f"AI model load failed at startup: {e}")
-        # Do not crash server — classifier will raise per-request if needed
     logger.info("✅ Startup complete. Server ready.")
     yield
     logger.info("AgriShield backend shutting down.")
 
 
-# ---------------------------------------------------------------------------
-# FastAPI app
-# ---------------------------------------------------------------------------
-
 app = FastAPI(
     title="AgriShield / CropGuard AI API",
-    description="Crop disease early-warning platform: Image Diagnosis, Weather Check, Regional Outbreaks & Advisory",
+    description="Agriculture crop disease early warning system — CodeArena'26 Topic 05",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
-
-# ---------------------------------------------------------------------------
-# CORS — allow frontend origins
-# ---------------------------------------------------------------------------
-
+frontend_url = os.getenv("FRONTEND_URL", getattr(settings, "frontend_url", "http://localhost:5173"))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        getattr(settings, "frontend_url", "http://localhost:5173"),
+        frontend_url,
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
@@ -83,43 +72,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# ---------------------------------------------------------------------------
-# Routers
-# ---------------------------------------------------------------------------
-
-# Member 1 routers
+# ── Feature Slice 1 (Member 1) ────────────────────────────────────────────────
 app.include_router(reports.router)
 
-# Member 2 routers
+# ── Feature Slice 2 (Member 2) ────────────────────────────────────────────────
 app.include_router(analysis_router)
 app.include_router(weather_router)
 app.include_router(additional_image_router)
 
+# ── Feature Slice 3 (Member 3) ────────────────────────────────────────────────
+app.include_router(officer.router)
+app.include_router(shared.router)
 
-# ---------------------------------------------------------------------------
-# Health & Root check
-# ---------------------------------------------------------------------------
 
 @app.get("/")
 def read_root():
     return {
         "status": "online",
         "service": "AgriShield / CropGuard AI API",
-        "slices": ["Feature Slice 1: Image Diagnosis", "Feature Slice 2: Advisory Engine"]
+        "slices": [
+            "Feature Slice 1: Image Diagnosis",
+            "Feature Slice 2: Advisory Engine",
+            "Feature Slice 3: Officer Dashboard & Outbreak Management"
+        ]
     }
 
 
 @app.get("/health", tags=["health"])
 def health():
-    """Simple health check endpoint."""
     classifier = get_classifier()
     return {
         "success": True,
         "data": {
             "status": "healthy",
             "ai_classifier_loaded": classifier.is_loaded,
-            "dev_mode": classifier._dev_mode,
+            "dev_mode": getattr(classifier, "_dev_mode", False),
         },
-        "message": "",
+        "message": "OK",
     }
