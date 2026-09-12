@@ -108,7 +108,7 @@ export default function ReportStatus() {
       >
         <button
           className="btn btn-ghost"
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/farmer')}
           aria-label="Go back"
         >
           ‹
@@ -277,23 +277,37 @@ export default function ReportStatus() {
               </div>
             </div>
 
-            {/* Member 2 placeholder */}
+            {/* Smart Advisory & Weather Action */}
             <div
               className="agri-card animate-fade-up delay-4"
               style={{
-                background: 'rgba(59,130,246,0.05)',
-                border: '1px dashed rgba(59,130,246,0.3)',
+                background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1))',
+                border: '1px solid rgba(16,185,129,0.3)',
                 textAlign: 'center',
-                padding: '1.25rem',
+                padding: '1.5rem',
+                borderRadius: '1rem',
               }}
             >
-              <span style={{ fontSize: '1.5rem' }}>🌦️</span>
-              <p style={{ fontWeight: 600, fontSize: '0.9rem', marginTop: '0.4rem' }}>
-                Full Diagnosis Pending
+              <span style={{ fontSize: '2rem' }}>🌦️</span>
+              <p style={{ fontWeight: 700, fontSize: '1rem', marginTop: '0.4rem', color: '#fff' }}>
+                Full Advisory & Weather Risk Ready
               </p>
-              <p style={{ fontSize: '0.78rem', color: 'var(--color-muted)', marginTop: '0.25rem' }}>
-                Weather analysis and final diagnosis will appear here shortly.
+              <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', marginTop: '0.25rem', marginBottom: '1rem' }}>
+                Open-Meteo climate conditions, treatment steps (Sinhala/Tamil/English), and officer triage status.
               </p>
+              <button
+                className="btn btn-primary"
+                onClick={() => navigate(`/results/${report.id}`)}
+                style={{
+                  background: 'linear-gradient(90deg, #10b981, #059669)',
+                  padding: '0.6rem 1.25rem',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  borderRadius: '0.75rem',
+                }}
+              >
+                View Full Advisory & Diagnosis →
+              </button>
             </div>
           </>
         )}

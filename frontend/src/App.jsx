@@ -1,6 +1,14 @@
 import React from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
+// Auth Context & Route Guard
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+
+// Global Navigation Bar & Login Portal
+import Navbar from './components/Navbar';
+import LoginPage from './pages/LoginPage';
+
 // Member 1 Pages (Slice 1: Farmer Image Reporting)
 import FarmerHome from './pages/FarmerHome';
 import NewReport from './pages/NewReport';
@@ -20,12 +28,12 @@ import FieldVisit from './pages/FieldVisit';
 import OutbreaksPage from './pages/OutbreaksPage';
 import AIFeedbackPage from './pages/AIFeedbackPage';
 
-/** Officer layout – sidebar + main content area */
+/** Officer layout – sidebar + main content area with seamless header integration */
 function OfficerLayout() {
   return (
-    <div className="flex min-h-screen bg-bg-primary">
+    <div className="flex min-h-[calc(100vh-4rem)] bg-[#080d1a]">
       <OfficerSidebar />
-      <main className="ml-60 flex-1 p-6 overflow-y-auto min-h-screen">
+      <main className="ml-60 flex-1 p-6 md:p-8 overflow-y-auto min-h-[calc(100vh-4rem)]">
         <Outlet />
       </main>
     </div>
@@ -34,47 +42,70 @@ function OfficerLayout() {
 
 export default function App() {
   return (
-    <Routes>
-      {/* ── Feature Slice 1: Farmer Image Upload & Reporting ── */}
-      <Route path="/" element={<FarmerHome />} />
-      <Route path="/reports/new" element={<NewReport />} />
-      <Route path="/reports/:reportId" element={<ReportStatus />} />
+    <AuthProvider>
+      <div className="min-h-screen bg-[#080d1a] text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+        {/* Global persistent unified Navbar */}
+        <Navbar />
 
-      {/* ── Feature Slice 2: Smart Diagnosis & Farmer Advisory ── */}
-      <Route path="/results/:reportId" element={<DiagnosisResult />} />
-      <Route path="/additional-info/:reportId" element={<AdditionalInfo />} />
-      <Route path="/alerts" element={<FarmerAlerts />} />
+        {/* Main Routed Content Area */}
+        <div className="flex-1 flex flex-col">
+          <Routes>
+            {/* ── Entry Point is the Login Portal ── */}
+            <Route path="/" element={<LoginPage />} />
+            <Route path="/login" element={<Navigate to="/" replace />} />
 
-      {/* ── Feature Slice 3: Officer Dashboard & Outbreak Management ── */}
-      <Route path="/officer" element={<OfficerLayout />}>
-        <Route index element={<OfficerDashboard />} />
-        <Route path="tickets" element={<OfficerDashboard />} />
-        <Route path="tickets/:ticketId" element={<OfficerTicket />} />
-        <Route path="tickets/:ticketId/field-visit" element={<FieldVisit />} />
-        <Route path="map" element={<RegionalMap />} />
-        <Route path="outbreaks" element={<OutbreaksPage />} />
-        <Route path="feedback" element={<AIFeedbackPage />} />
-      </Route>
+            {/* ── Feature Slice 1 & 2: Farmer Portal ── */}
+            <Route path="/farmer" element={<FarmerHome />} />
+            <Route path="/reports/new" element={<NewReport />} />
+            <Route path="/reports/:reportId" element={<ReportStatus />} />
+            <Route path="/results/:reportId" element={<DiagnosisResult />} />
+            <Route path="/additional-info/:reportId" element={<AdditionalInfo />} />
+            <Route path="/alerts" element={<FarmerAlerts />} />
 
-      {/* Route aliases for Officer convenience */}
-      <Route path="/tickets" element={<Navigate to="/officer/tickets" replace />} />
-      <Route path="/tickets/:ticketId" element={<Navigate to="/officer/tickets/:ticketId" replace />} />
-      <Route path="/map" element={<Navigate to="/officer/map" replace />} />
-      <Route path="/visits" element={<Navigate to="/officer/tickets" replace />} />
-      <Route path="/outbreaks" element={<Navigate to="/officer/outbreaks" replace />} />
-      <Route path="/ai-feedback" element={<Navigate to="/officer/feedback" replace />} />
+            {/* ── Feature Slice 3: Officer Dashboard & Outbreak Management (Protected) ── */}
+            <Route
+              path="/officer"
+              element={
+                <ProtectedRoute requiredRole="officer">
+                  <OfficerLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<OfficerDashboard />} />
+              <Route path="tickets" element={<OfficerDashboard />} />
+              <Route path="tickets/:ticketId" element={<OfficerTicket />} />
+              <Route path="tickets/:ticketId/field-visit" element={<FieldVisit />} />
+              <Route path="map" element={<RegionalMap />} />
+              <Route path="outbreaks" element={<OutbreaksPage />} />
+              <Route path="feedback" element={<AIFeedbackPage />} />
+            </Route>
 
-      {/* 404 Fallback */}
-      <Route path="*" element={
-        <div className="min-h-screen bg-bg-primary flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-8xl font-black gradient-text mb-4">404</p>
-            <p className="text-slate-400 mb-6">Page not found</p>
-            <a href="/" className="btn-primary mr-4">Farmer Portal</a>
-            <a href="/officer" className="btn-secondary">Officer Dashboard</a>
-          </div>
+            {/* Route aliases for Officer convenience */}
+            <Route path="/tickets" element={<Navigate to="/officer/tickets" replace />} />
+            <Route path="/tickets/:ticketId" element={<Navigate to="/officer/tickets/:ticketId" replace />} />
+            <Route path="/map" element={<Navigate to="/officer/map" replace />} />
+            <Route path="/visits" element={<Navigate to="/officer/tickets" replace />} />
+            <Route path="/outbreaks" element={<Navigate to="/officer/outbreaks" replace />} />
+            <Route path="/ai-feedback" element={<Navigate to="/officer/feedback" replace />} />
+
+            {/* 404 Fallback */}
+            <Route path="*" element={
+              <div className="min-h-[calc(100vh-4rem)] bg-[#080d1a] flex items-center justify-center p-6">
+                <div className="glass rounded-2xl p-8 max-w-md text-center border border-white/10 shadow-2xl">
+                  <p className="text-7xl font-black bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent mb-3">404</p>
+                  <h2 className="text-lg font-bold text-white mb-2">Page Not Found</h2>
+                  <p className="text-xs text-slate-400 mb-6">The route you are trying to visit does not exist or has moved.</p>
+                  <div className="flex items-center justify-center gap-3">
+                    <a href="/" className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-all">
+                      🔐 Login Portal
+                    </a>
+                  </div>
+                </div>
+              </div>
+            } />
+          </Routes>
         </div>
-      } />
-    </Routes>
+      </div>
+    </AuthProvider>
   );
 }

@@ -118,34 +118,37 @@ const DiagnosisResult = () => {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950/30">
-      {/* Top navigation bar */}
-      <nav className="sticky top-0 z-10 backdrop-blur-md bg-slate-900/80 border-b border-slate-700/40 px-4 py-3 flex items-center justify-between">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors text-sm"
-        >
-          <span>←</span> Back
-        </button>
-        <h1 className="text-white font-semibold text-sm">Crop Diagnosis</h1>
-        {/* Language selector */}
-        <div className="flex gap-1">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#080d1a] py-6 px-4 sm:px-6 animate-fade-in">
+      {/* Sub navigation bar */}
+      <div className="max-w-2xl mx-auto mb-6 flex items-center justify-between pb-4 border-b border-white/5">
+        <div>
+          <button
+            onClick={() => navigate('/farmer')}
+            className="flex items-center gap-1.5 text-slate-400 hover:text-emerald-400 transition-colors text-xs font-semibold mb-1"
+          >
+            <span>←</span> Back to Overview
+          </button>
+          <h1 className="text-xl sm:text-2xl font-black text-white">Crop Diagnosis & Advisory</h1>
+        </div>
+
+        {/* Language selector pills */}
+        <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
           {LANGUAGES.map((l) => (
             <button
               key={l.code}
               onClick={() => handleLanguageChange(l.code)}
               disabled={langLoading}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                 language === l.code
-                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/20"
-                  : "text-slate-400 hover:text-white hover:bg-slate-700"
+                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-bold"
+                  : "text-slate-400 hover:text-white hover:bg-white/5"
               }`}
             >
               {l.label}
             </button>
           ))}
         </div>
-      </nav>
+      </div>
 
       {/* Main content */}
       <main className="max-w-lg mx-auto px-4 py-6 space-y-4 pb-12">
