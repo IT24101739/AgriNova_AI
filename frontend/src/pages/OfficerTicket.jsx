@@ -81,6 +81,7 @@ export default function OfficerTicket() {
   const [confirmError, setConfirmError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [deletingVisitId, setDeletingVisitId] = useState(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   const fetch = async () => {
     try {
@@ -114,9 +115,18 @@ export default function OfficerTicket() {
   };
 
   const handleStatusChange = async (status) => {
-    await patchTicket(ticketId, { status });
-    if (status === 'RESOLVED') setSuccessMsg('Ticket marked as Resolved.');
-    fetch();
+    setStatusUpdating(true);
+    try {
+      await patchTicket(ticketId, { status });
+      setData(prev => prev ? { ...prev, status } : prev);
+      setSuccessMsg(`Ticket status set to ${status.replace(/_/g, ' ')}.`);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err) {
+      console.error('Failed to update status:', err);
+      alert(err.response?.data?.detail || 'Failed to update ticket status');
+    } finally {
+      setStatusUpdating(false);
+    }
   };
 
   const handleDeleteFieldVisit = async (visitId) => {
@@ -218,38 +228,62 @@ export default function OfficerTicket() {
         </div>
       )}
 
-      {/* Quick status change */}
-      {ticket.status !== 'RESOLVED' && ticket.status !== 'CONFIRMED' && (
-        <div className="glass rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
-          <span className="text-xs text-slate-400 font-semibold uppercase tracking-widest">Set Status:</span>
-          {['FIELD_VISIT_REQUIRED', 'UNDER_REVIEW', 'LAB_REVIEW'].map(s => {
-            const isCurrent = ticket.status === s;
+      {/* Workflow Status Management Bar */}
+      <div className="glass rounded-xl px-4 py-3 flex flex-wrap items-center gap-3 border border-emerald-500/20">
+        <span className="text-xs text-slate-400 font-semibold uppercase tracking-widest flex items-center gap-1.5">
+          {statusUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" /> : null}
+          Workflow Status:
+        </span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {[
+            { id: 'OPEN', label: 'Open' },
+            { id: 'ASSIGNED', label: 'Assigned' },
+            { id: 'FIELD_VISIT_REQUIRED', label: 'Field Visit Required' },
+            { id: 'UNDER_REVIEW', label: 'Under Review' },
+            { id: 'LAB_REVIEW', label: 'Lab Review' },
+            { id: 'CONFIRMED', label: 'Confirmed' },
+            { id: 'RESOLVED', label: 'Resolved' },
+          ].map(s => {
+            const isCurrent = ticket.status === s.id;
             return (
               <button
-                key={s}
-                onClick={() => handleStatusChange(s)}
+                key={s.id}
+                disabled={statusUpdating}
+                onClick={() => handleStatusChange(s.id)}
                 className={`text-xs py-1.5 px-3 rounded-xl font-medium transition-all ${
                   isCurrent
-                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50 ring-2 ring-emerald-400/50'
-                    : 'btn-secondary hover:text-white'
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50 ring-2 ring-emerald-400/50 font-bold'
+                    : 'btn-secondary hover:text-white opacity-85 hover:opacity-100'
                 }`}
               >
                 {isCurrent && <span className="mr-1 text-emerald-200">✓</span>}
-                {s.replace(/_/g, ' ')}
+                {s.label}
               </button>
             );
           })}
+        </div>
 
-          {/* Mark Resolved button */}
+        {/* Quick action button */}
+        {ticket.status !== 'RESOLVED' ? (
           <button
+            disabled={statusUpdating}
             onClick={() => handleStatusChange('RESOLVED')}
             className="ml-auto flex items-center gap-1.5 text-xs py-1.5 px-3 rounded-xl font-bold bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-600 hover:to-teal-600 text-white shadow-md transition-all"
           >
             <CheckCheck className="w-3.5 h-3.5" />
             Mark Resolved
           </button>
-        </div>
-      )}
+        ) : (
+          <button
+            disabled={statusUpdating}
+            onClick={() => handleStatusChange('OPEN')}
+            className="ml-auto flex items-center gap-1.5 text-xs py-1.5 px-3 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 transition-all"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Reopen Case
+          </button>
+        )}
+      </div>
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">

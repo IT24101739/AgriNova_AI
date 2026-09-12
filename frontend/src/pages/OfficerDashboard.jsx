@@ -194,12 +194,24 @@ export default function OfficerDashboard() {
 
         <div className="p-5">
           {view === 'table' ? (
-            <TicketTable tickets={tickets} loading={loading} onDeleted={id => setTickets(prev => prev.filter(t => t.id !== id))} />
+            <TicketTable
+              tickets={tickets}
+              loading={loading}
+              onDeleted={id => setTickets(prev => prev.filter(t => t.id !== id))}
+              onStatusUpdated={(id, status) => setTickets(prev => prev.map(t => t.id === id ? { ...t, status } : t))}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {loading
                 ? [...Array(6)].map((_, i) => <div key={i} className="h-36 rounded-xl bg-white/5 animate-pulse" />)
-                : tickets.map(t => <TicketCard key={t.id} ticket={t} onDeleted={id => setTickets(prev => prev.filter(x => x.id !== id))} />)
+                : tickets.map(t => (
+                    <TicketCard
+                      key={t.id}
+                      ticket={t}
+                      onDeleted={id => setTickets(prev => prev.filter(x => x.id !== id))}
+                      onStatusUpdated={(id, status) => setTickets(prev => prev.map(x => x.id === id ? { ...x, status } : x))}
+                    />
+                  ))
               }
             </div>
           )}

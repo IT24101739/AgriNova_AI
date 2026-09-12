@@ -331,27 +331,37 @@ def update_ticket(
     ticket_id: str,
     updates: dict[str, Any],
 ) -> dict[str, Any]:
-    now_iso = datetime.utcnow().isoformat()
-    updates["updated_at"] = now_iso
+    # Normalize status and priority if provided
+    if "status" in updates and isinstance(updates["status"], str):
+        updates["status"] = updates["status"].upper()
+    if "priority" in updates and isinstance(updates["priority"], str):
+        updates["priority"] = updates["priority"].upper()
 
-    # Supabase update
+    # 1. Supabase update (Supabase schema does not have updated_at column on officer_tickets)
     sb_res = None
+    sb_payload = {k: v for k, v in updates.items() if k != "updated_at"}
     try:
         db = get_supabase()
-        res = db.table("officer_tickets").update(updates).eq("id", ticket_id).execute()
+        res = db.table("officer_tickets").update(sb_payload).eq("id", ticket_id).execute()
         if res.data:
             sb_res = res.data[0]
     except Exception as exc:
         logger.warning("Supabase update_ticket skipped: %s", exc)
 
-    # ORM update
+    # 2. Local ORM update (requires datetime object for updated_at, and UUIDs for foreign keys)
     try:
         session = SessionLocal()
         t = session.query(OfficerTicket).filter(OfficerTicket.id == uuid.UUID(ticket_id)).first()
         if t:
             for k, v in updates.items():
+                if k == "updated_at":
+                    continue
                 if hasattr(t, k):
-                    setattr(t, k, v)
+                    if k in ("assigned_officer", "report_id") and isinstance(v, str):
+                        setattr(t, k, uuid.UUID(v) if v else None)
+                    else:
+                        setattr(t, k, v)
+            t.updated_at = datetime.utcnow()
             session.commit()
         session.close()
     except Exception as exc:
