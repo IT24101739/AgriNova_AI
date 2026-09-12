@@ -167,28 +167,30 @@ def get_tickets(
                 rep_dict = {}
                 if t.report_id:
                     rep = session.query(Report).filter(Report.id == t.report_id).first()
-                    if rep:
-                        farm_dict = {}
-                        if rep.farm:
-                            farm_dict = {
-                                "latitude": rep.farm.latitude,
-                                "longitude": rep.farm.longitude,
-                                "district": rep.farm.district,
-                                "farmer_id": str(rep.farm.farmer_id),
-                            }
-                        rep_dict = {
-                            "id": str(rep.id),
-                            "crop": rep.crop,
-                            "disease": rep.disease,
-                            "confidence": rep.confidence,
-                            "severity": rep.severity,
-                            "spread_risk": rep.spread_risk,
-                            "status": rep.status,
-                            "created_at": rep.created_at.isoformat() if rep.created_at else None,
-                            "image_url": rep.image_url,
-                            "description": rep.description,
-                            "farms": farm_dict,
+                    if not rep:
+                        # Report was deleted or does not exist, skip orphaned ticket
+                        continue
+                    farm_dict = {}
+                    if rep.farm:
+                        farm_dict = {
+                            "latitude": rep.farm.latitude,
+                            "longitude": rep.farm.longitude,
+                            "district": rep.farm.district,
+                            "farmer_id": str(rep.farm.farmer_id),
                         }
+                    rep_dict = {
+                        "id": str(rep.id),
+                        "crop": rep.crop,
+                        "disease": rep.disease,
+                        "confidence": rep.confidence,
+                        "severity": rep.severity,
+                        "spread_risk": rep.spread_risk,
+                        "status": rep.status,
+                        "created_at": rep.created_at.isoformat() if rep.created_at else None,
+                        "image_url": rep.image_url,
+                        "description": rep.description,
+                        "farms": farm_dict,
+                    }
                 tickets.append({
                     "id": str(t.id),
                     "report_id": str(t.report_id) if t.report_id else None,

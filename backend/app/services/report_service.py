@@ -414,7 +414,16 @@ def delete_reports(db: Session, report_ids: List[uuid.UUID]) -> int:
 
     # 2. Delete from local SQLite DB
     try:
-        from app.models.report_model import AnalysisResult, Report
+        from app.models.report_model import AnalysisResult, Report, OfficerTicket, FieldVisit, LabRequest, AiFeedback
+        # Find any tickets referencing these reports to clean up visits and lab requests
+        tickets = db.query(OfficerTicket).filter(OfficerTicket.report_id.in_(report_ids)).all()
+        ticket_ids = [t.id for t in tickets]
+        if ticket_ids:
+            db.query(FieldVisit).filter(FieldVisit.ticket_id.in_(ticket_ids)).delete(synchronize_session=False)
+            db.query(LabRequest).filter(LabRequest.ticket_id.in_(ticket_ids)).delete(synchronize_session=False)
+            db.query(OfficerTicket).filter(OfficerTicket.id.in_(ticket_ids)).delete(synchronize_session=False)
+
+        db.query(AiFeedback).filter(AiFeedback.report_id.in_(report_ids)).delete(synchronize_session=False)
         db.query(AnalysisResult).filter(AnalysisResult.report_id.in_(report_ids)).delete(synchronize_session=False)
         deleted_count = db.query(Report).filter(Report.id.in_(report_ids)).delete(synchronize_session=False)
         db.commit()
