@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PriorityBadge from './PriorityBadge';
-import { Clock, ChevronRight, MapPin, Trash2, Loader2 } from 'lucide-react';
+import { Clock, ChevronRight, MapPin, Loader2 } from 'lucide-react';
 import { API_BASE } from '../config/api';
 
 const STATUS_COLORS = {
@@ -25,7 +25,6 @@ export default function TicketCard({ ticket, onDeleted, onStatusUpdated }) {
   const navigate = useNavigate();
   const report = ticket.reports || {};
   const farm = report.farms || {};
-  const [deleting, setDeleting] = useState(false);
   const [updating, setUpdating] = useState(false);
 
   const handleStatusChange = async (e, newStatus) => {
@@ -46,25 +45,6 @@ export default function TicketCard({ ticket, onDeleted, onStatusUpdated }) {
     }
   };
 
-  const handleDelete = async (e) => {
-    e.stopPropagation();
-    if (!window.confirm('Delete this ticket? This cannot be undone.')) return;
-    setDeleting(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/officer/tickets/${ticket.id}`, { method: 'DELETE' });
-      if (res.ok) {
-        onDeleted?.(ticket.id);
-      } else {
-        alert('Failed to delete ticket from server');
-      }
-    } catch (err) {
-      console.error('Delete ticket error:', err);
-      alert('Failed to delete ticket. Please try again.');
-    } finally {
-      setDeleting(false);
-    }
-  };
-
   return (
     <div
       onClick={() => navigate(`/officer/tickets/${ticket.id}`)}
@@ -72,17 +52,7 @@ export default function TicketCard({ ticket, onDeleted, onStatusUpdated }) {
                  hover:border-white/20 hover:bg-white/5 transition-all duration-200
                  animate-fade-in group relative"
     >
-      {/* Delete button — top-right corner */}
-      <button
-        onClick={handleDelete}
-        disabled={deleting}
-        title="Delete ticket"
-        className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/15 transition-colors opacity-0 group-hover:opacity-100 z-10"
-      >
-        {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-      </button>
-
-      <div className="flex items-start justify-between gap-3 pr-6">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {/* Header */}
           <div className="flex items-center gap-2 mb-2 flex-wrap" onClick={e => e.stopPropagation()}>

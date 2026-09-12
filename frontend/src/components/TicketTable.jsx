@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PriorityBadge from './PriorityBadge';
-import { ArrowUpDown, ChevronRight, Trash2, Loader2 } from 'lucide-react';
+import { ArrowUpDown, ChevronRight } from 'lucide-react';
 import { API_BASE } from '../config/api';
 
 const STATUS_PILL = {
@@ -18,7 +18,6 @@ export default function TicketTable({ tickets = [], loading, onDeleted, onStatus
   const navigate = useNavigate();
   const [sortKey, setSortKey] = useState('created_at');
   const [sortAsc, setSortAsc] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
 
   const sorted = [...tickets].sort((a, b) => {
@@ -51,25 +50,6 @@ export default function TicketTable({ tickets = [], loading, onDeleted, onStatus
       alert('Failed to update ticket status');
     } finally {
       setUpdatingId(null);
-    }
-  };
-
-  const handleDelete = async (e, ticketId) => {
-    e.stopPropagation();
-    if (!window.confirm('Delete this ticket? This cannot be undone.')) return;
-    setDeletingId(ticketId);
-    try {
-      const res = await fetch(`${API_BASE}/api/officer/tickets/${ticketId}`, { method: 'DELETE' });
-      if (res.ok) {
-        onDeleted?.(ticketId);
-      } else {
-        alert('Failed to delete ticket from server');
-      }
-    } catch (err) {
-      console.error('Delete ticket error:', err);
-      alert('Failed to delete ticket. Please try again.');
-    } finally {
-      setDeletingId(null);
     }
   };
 
@@ -175,25 +155,13 @@ export default function TicketTable({ tickets = [], loading, onDeleted, onStatus
                   })}
                 </td>
                 <td onClick={e => e.stopPropagation()}>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => navigate(`/officer/tickets/${ticket.id}`)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                      title="View ticket"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => handleDelete(e, ticket.id)}
-                      disabled={deletingId === ticket.id}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors"
-                      title="Delete ticket"
-                    >
-                      {deletingId === ticket.id
-                        ? <Loader2 className="w-4 h-4 animate-spin" />
-                        : <Trash2 className="w-4 h-4" />}
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => navigate(`/officer/tickets/${ticket.id}`)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                    title="View ticket"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </td>
               </tr>
             );

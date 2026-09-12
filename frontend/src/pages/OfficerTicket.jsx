@@ -128,26 +128,6 @@ export default function OfficerTicket() {
     }
   };
 
-  const [deletingTicket, setDeletingTicket] = useState(false);
-
-  const handleDeleteTicket = async () => {
-    if (!window.confirm("Are you sure you want to permanently delete this ticket? This cannot be undone.")) return;
-    setDeletingTicket(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/officer/tickets/${ticketId}`, { method: 'DELETE' });
-      if (res.ok) {
-        navigate('/officer', { replace: true });
-      } else {
-        alert('Failed to delete ticket from server');
-      }
-    } catch (err) {
-      console.error('Delete ticket error:', err);
-      alert('Failed to delete ticket.');
-    } finally {
-      setDeletingTicket(false);
-    }
-  };
-
   const handleDeleteFieldVisit = async (visitId) => {
     if (!window.confirm('Delete this field visit record?')) return;
     setDeletingVisitId(visitId);
@@ -232,14 +212,6 @@ export default function OfficerTicket() {
           <div className="flex items-center gap-2 flex-shrink-0">
             <button onClick={fetch} title="Refresh case data" className="btn-secondary py-2 px-3">
               <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={handleDeleteTicket}
-              disabled={deletingTicket}
-              title="Delete this ticket"
-              className="btn-secondary py-2 px-3 text-red-400 hover:text-red-300 hover:border-red-500/30"
-            >
-              {deletingTicket ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>
