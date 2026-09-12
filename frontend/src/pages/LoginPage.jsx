@@ -18,7 +18,7 @@ import {
 export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, login, demoAccounts } = useAuth();
+  const { user, login, logout, demoAccounts } = useAuth();
 
   const initialRole = searchParams.get('role') === 'officer' ? 'officer' : 'farmer';
   const [selectedRole, setSelectedRole] = useState(initialRole);
@@ -29,16 +29,10 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // If already logged in, redirect
+  // Always show the login portal on root visit — reset any previous session
   useEffect(() => {
-    if (user) {
-      if (user.role === 'officer') {
-        navigate('/officer', { replace: true });
-      } else {
-        navigate('/farmer', { replace: true });
-      }
-    }
-  }, [user, navigate]);
+    logout();
+  }, []);
 
   // When switching role tab, pre-fill or clear
   const handleRoleChange = (role) => {
