@@ -1,0 +1,1 @@
+"""AgriShield backend application package."""
