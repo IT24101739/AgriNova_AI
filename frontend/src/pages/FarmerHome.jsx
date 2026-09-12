@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getFarmReports, getReports } from '../services/api';
+import { getFarmReports, getReports, deleteReport, deleteReports } from '../services/api';
 import ReportCard from '../components/ReportCard';
 import {
   Leaf,
@@ -23,7 +23,11 @@ import {
   Droplets,
   History,
   ShieldCheck,
-  Sprout
+  Sprout,
+  Trash2,
+  CheckSquare,
+  Square,
+  AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -34,6 +38,9 @@ export default function FarmerHome() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filterMode, setFilterMode] = useState('all');
+  const [selectedReportIds, setSelectedReportIds] = useState(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [actionMessage, setActionMessage] = useState('');
 
   const fetchReports = async () => {
     setLoading(true);
@@ -45,6 +52,7 @@ export default function FarmerHome() {
 
       const res = await getReports(farmerId ? { farmer_id: farmerId } : { limit: 50 });
       setReports(res?.data?.reports || []);
+      setSelectedReportIds(new Set());
     } catch (err) {
       console.error('Failed to load past reports from Supabase:', err);
       setError('Could not load reports from Supabase database.');
@@ -56,6 +64,82 @@ export default function FarmerHome() {
   useEffect(() => {
     fetchReports();
   }, [user, filterMode]);
+
+  const handleToggleSelect = (reportId) => {
+    setSelectedReportIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(reportId)) {
+        next.delete(reportId);
+      } else {
+        next.add(reportId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedReportIds.size === reports.length) {
+      setSelectedReportIds(new Set());
+    } else {
+      setSelectedReportIds(new Set(reports.map((r) => r.id)));
+    }
+  };
+
+  const handleDeleteSingle = async (reportId) => {
+    const reportItem = reports.find((r) => r.id === reportId);
+    const label = reportItem?.crop ? `${reportItem.crop} scan` : 'this report';
+    if (!window.confirm(`Are you sure you want to delete ${label} from the Supabase database?`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setActionMessage('');
+    try {
+      await deleteReport(reportId);
+      setReports((prev) => prev.filter((r) => r.id !== reportId));
+      setSelectedReportIds((prev) => {
+        const next = new Set(prev);
+        next.delete(reportId);
+        return next;
+      });
+      setActionMessage('Report successfully deleted from database.');
+      setTimeout(() => setActionMessage(''), 3500);
+    } catch (err) {
+      console.error('Failed to delete report:', err);
+      alert('Failed to delete report. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    const count = selectedReportIds.size;
+    if (count === 0) return;
+
+    if (
+      !window.confirm(
+        `Are you sure you want to delete ${count} selected report(s) from Supabase database? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setActionMessage('');
+    try {
+      const idsToDelete = Array.from(selectedReportIds);
+      await deleteReports(idsToDelete);
+      setReports((prev) => prev.filter((r) => !selectedReportIds.has(r.id)));
+      setSelectedReportIds(new Set());
+      setActionMessage(`Successfully deleted ${count} selected report(s) from database.`);
+      setTimeout(() => setActionMessage(''), 3500);
+    } catch (err) {
+      console.error('Failed to delete reports:', err);
+      alert('Failed to delete selected reports. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#05130b] text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-white pb-16">
@@ -450,6 +534,79 @@ export default function FarmerHome() {
             </div>
           </div>
 
+          {/* Action Success Notification */}
+          {actionMessage && (
+            <div className="mb-4 p-3 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-xs text-emerald-200 flex items-center justify-between shadow-lg animate-fade-in">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>{actionMessage}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActionMessage('')}
+                className="text-emerald-300 hover:text-white text-xs font-bold px-2 py-0.5"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Batch Actions Toolbar */}
+          {!loading && reports.length > 0 && (
+            <div className="mb-4 p-2.5 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleSelectAll}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
+                >
+                  {selectedReportIds.size === reports.length ? (
+                    <>
+                      <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Deselect All</span>
+                    </>
+                  ) : (
+                    <>
+                      <Square className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Select All ({reports.length})</span>
+                    </>
+                  )}
+                </button>
+
+                {selectedReportIds.size > 0 && (
+                  <span className="text-xs font-bold text-emerald-300 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-500/30">
+                    ✓ {selectedReportIds.size} selected
+                  </span>
+                )}
+              </div>
+
+              {selectedReportIds.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedReportIds(new Set())}
+                    className="px-2.5 py-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isDeleting}
+                    onClick={handleDeleteSelected}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-red-600 hover:bg-red-500 shadow-lg shadow-red-600/25 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>
+                      {isDeleting
+                        ? 'Deleting…'
+                        : `Delete Selected (${selectedReportIds.size})`}
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {loading && (
             <div className="flex justify-center p-8">
               <div className="w-8 h-8 rounded-full border-2 border-emerald-500/30 border-t-emerald-400 animate-spin" />
@@ -484,7 +641,13 @@ export default function FarmerHome() {
           {!loading && reports.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {reports.map((report) => (
-                <ReportCard key={report.id} report={report} />
+                <ReportCard
+                  key={report.id}
+                  report={report}
+                  isSelected={selectedReportIds.has(report.id)}
+                  onToggleSelect={handleToggleSelect}
+                  onDelete={handleDeleteSingle}
+                />
               ))}
             </div>
           )}

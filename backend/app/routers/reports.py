@@ -8,9 +8,10 @@ GET    /api/farms/{farm_id}/reports    — list all reports for a farm
 
 import uuid
 import logging
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.models.database import get_db
@@ -23,6 +24,10 @@ router = APIRouter(prefix="/api", tags=["reports"])
 
 # Maximum upload size: 10 MB
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
+
+
+class BatchDeleteReportsRequest(BaseModel):
+    report_ids: List[str]
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +291,57 @@ def get_farm_reports(
             "count": len(reports),
         },
         "message": "",
+    }
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/reports/{report_id}  — Delete single report
+# ---------------------------------------------------------------------------
+
+@router.delete("/reports/{report_id}")
+def delete_single_report(
+    report_id: str,
+    db: Session = Depends(get_db),
+):
+    """Delete a single crop diagnosis report from Supabase and local DB."""
+    try:
+        report_uuid = uuid.UUID(report_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid report_id format.")
+
+    deleted = report_service.delete_reports(db, [report_uuid])
+    return {
+        "success": True,
+        "message": f"Report {report_id} deleted successfully.",
+        "data": {"deleted_id": report_id, "count": deleted},
+    }
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/reports  — Batch delete selected reports
+# ---------------------------------------------------------------------------
+
+@router.delete("/reports")
+def delete_selected_reports(
+    body: BatchDeleteReportsRequest,
+    db: Session = Depends(get_db),
+):
+    """Delete multiple selected reports from Supabase and local DB."""
+    uuids = []
+    for rid in body.report_ids:
+        try:
+            uuids.append(uuid.UUID(rid))
+        except ValueError:
+            pass
+
+    if not uuids:
+        raise HTTPException(status_code=400, detail="No valid report IDs provided.")
+
+    count = report_service.delete_reports(db, uuids)
+    return {
+        "success": True,
+        "message": f"Successfully deleted {count} report(s).",
+        "data": {"deleted_ids": [str(u) for u in uuids], "count": count},
     }
 
 

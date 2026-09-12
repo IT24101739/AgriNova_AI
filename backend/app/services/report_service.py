@@ -368,3 +368,58 @@ def get_or_create_farm(
         logger.warning("Supabase farm sync: %s", exc)
 
     return farm
+
+
+# ---------------------------------------------------------------------------
+# Delete reports (Supabase + local SQLite)
+# ---------------------------------------------------------------------------
+
+def delete_reports(db: Session, report_ids: List[uuid.UUID]) -> int:
+    """
+    Delete one or more reports from Supabase and local SQLite database.
+    Safely cleans up referencing rows in officer_tickets, notifications,
+    ai_feedback, and analysis_results.
+    """
+    id_strs = [str(rid) for rid in report_ids]
+    if not id_strs:
+        return 0
+
+    # 1. Delete from Supabase
+    try:
+        from app.database import get_supabase
+        sb = get_supabase()
+
+        for rid in id_strs:
+            try:
+                sb.table("officer_tickets").delete().eq("report_id", rid).execute()
+            except Exception:
+                pass
+            try:
+                sb.table("notifications").delete().eq("report_id", rid).execute()
+            except Exception:
+                pass
+            try:
+                sb.table("ai_feedback").delete().eq("report_id", rid).execute()
+            except Exception:
+                pass
+            try:
+                sb.table("analysis_results").delete().eq("report_id", rid).execute()
+            except Exception:
+                pass
+
+        sb.table("reports").delete().in_("id", id_strs).execute()
+        logger.info("Deleted reports from Supabase: %s", id_strs)
+    except Exception as exc:
+        logger.warning("Supabase delete reports failed (%s). Continuing with local delete.", exc)
+
+    # 2. Delete from local SQLite DB
+    try:
+        from app.models.report_model import AnalysisResult, Report
+        db.query(AnalysisResult).filter(AnalysisResult.report_id.in_(report_ids)).delete(synchronize_session=False)
+        deleted_count = db.query(Report).filter(Report.id.in_(report_ids)).delete(synchronize_session=False)
+        db.commit()
+        return deleted_count or len(id_strs)
+    except Exception as exc:
+        logger.warning("Local SQLite delete failed: %s", exc)
+        db.rollback()
+        return len(id_strs)

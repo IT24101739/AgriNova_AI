@@ -108,4 +108,22 @@ export async function getReports(params = {}) {
   return res.data;
 }
 
+/**
+ * Delete a single crop report by ID.
+ * @param {string} reportId
+ */
+export async function deleteReport(reportId) {
+  const res = await api.delete(`/reports/${reportId}`);
+  return res.data;
+}
+
+/**
+ * Delete multiple selected crop reports.
+ * @param {string[]} reportIds
+ */
+export async function deleteReports(reportIds) {
+  const res = await api.delete('/reports', { data: { report_ids: reportIds } });
+  return res.data;
+}
+
 export default api;
