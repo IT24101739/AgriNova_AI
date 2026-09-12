@@ -101,41 +101,50 @@ def get_tickets(
     limit: int = 50,
     offset: int = 0,
 ) -> list[dict[str, Any]]:
-    db = get_supabase()
-    q = (
-        db.table("officer_tickets")
-        .select(
-            "*, reports(id, crop, disease, confidence, severity, spread_risk, "
-            "status, created_at, image_url, description, "
-            "farms(latitude, longitude, district, farmer_id))"
+    try:
+        db = get_supabase()
+        q = (
+            db.table("officer_tickets")
+            .select(
+                "*, reports(id, crop, disease, confidence, severity, spread_risk, "
+                "status, created_at, image_url, description, "
+                "farms(latitude, longitude, district, farmer_id))"
+            )
+            .order("created_at", desc=True)
+            .range(offset, offset + limit - 1)
         )
-        .order("created_at", desc=True)
-        .range(offset, offset + limit - 1)
-    )
-    if status:
-        q = q.eq("status", status)
-    if priority:
-        q = q.eq("priority", priority)
-    if assigned_officer:
-        q = q.eq("assigned_officer", assigned_officer)
+        if status:
+            q = q.eq("status", status)
+        if priority:
+            q = q.eq("priority", priority)
+        if assigned_officer:
+            q = q.eq("assigned_officer", assigned_officer)
 
-    return q.execute().data
+        res = q.execute()
+        return res.data or []
+    except Exception as exc:
+        logger.warning("get_tickets query failed or table not found (%s). Returning empty list.", exc)
+        return []
 
 
 def get_ticket_detail(ticket_id: str) -> Optional[dict[str, Any]]:
-    db = get_supabase()
-    result = (
-        db.table("officer_tickets")
-        .select(
-            "*, "
-            "reports(*, analysis_results(*), farms(*, users(name, preferred_language))), "
-            "field_visits(*)"
+    try:
+        db = get_supabase()
+        result = (
+            db.table("officer_tickets")
+            .select(
+                "*, "
+                "reports(*, analysis_results(*), farms(*, users(name, preferred_language))), "
+                "field_visits(*)"
+            )
+            .eq("id", ticket_id)
+            .single()
+            .execute()
         )
-        .eq("id", ticket_id)
-        .single()
-        .execute()
-    )
-    return result.data
+        return result.data
+    except Exception as exc:
+        logger.warning("get_ticket_detail failed (%s)", exc)
+        return None
 
 
 def update_ticket(
@@ -151,51 +160,72 @@ def update_ticket(
 
 
 def get_dashboard_stats() -> dict[str, Any]:
-    db = get_supabase()
-
-    def count(filters: dict) -> int:
-        q = db.table("officer_tickets").select("id", count="exact")
-        for k, v in filters.items():
-            q = q.eq(k, v)
-        return q.execute().count or 0
-
-    today = datetime.utcnow().date().isoformat()
-
-    open_cases = count({"status": OPEN})
-    high_priority = count({"priority": "HIGH"})
-
-    # Field visits today
-    fv_today = (
-        db.table("field_visits")
-        .select("id", count="exact")
-        .gte("created_at", today)
-        .execute()
-        .count
-        or 0
-    )
-
-    # Outbreak stats
-    outbreaks_possible = (
-        db.table("outbreaks")
-        .select("id", count="exact")
-        .eq("status", "CANDIDATE")
-        .execute()
-        .count
-        or 0
-    )
-    outbreaks_confirmed = (
-        db.table("outbreaks")
-        .select("id", count="exact")
-        .eq("status", "CONFIRMED")
-        .execute()
-        .count
-        or 0
-    )
-
-    return {
-        "open_cases": open_cases,
-        "high_priority_cases": high_priority,
-        "possible_outbreaks": outbreaks_possible,
-        "confirmed_outbreaks": outbreaks_confirmed,
-        "todays_field_visits": fv_today,
+    default_stats = {
+        "open_cases": 0,
+        "high_priority_cases": 0,
+        "possible_outbreaks": 0,
+        "confirmed_outbreaks": 0,
+        "todays_field_visits": 0,
     }
+    try:
+        db = get_supabase()
+
+        def count(filters: dict) -> int:
+            try:
+                q = db.table("officer_tickets").select("id", count="exact")
+                for k, v in filters.items():
+                    q = q.eq(k, v)
+                return q.execute().count or 0
+            except Exception:
+                return 0
+
+        today = datetime.utcnow().date().isoformat()
+
+        open_cases = count({"status": OPEN})
+        high_priority = count({"priority": "HIGH"})
+
+        fv_today = 0
+        try:
+            fv_today = (
+                db.table("field_visits")
+                .select("id", count="exact")
+                .gte("created_at", today)
+                .execute()
+                .count
+                or 0
+            )
+        except Exception:
+            pass
+
+        outbreaks_possible = 0
+        outbreaks_confirmed = 0
+        try:
+            outbreaks_possible = (
+                db.table("outbreaks")
+                .select("id", count="exact")
+                .eq("status", "CANDIDATE")
+                .execute()
+                .count
+                or 0
+            )
+            outbreaks_confirmed = (
+                db.table("outbreaks")
+                .select("id", count="exact")
+                .eq("status", "CONFIRMED")
+                .execute()
+                .count
+                or 0
+            )
+        except Exception:
+            pass
+
+        return {
+            "open_cases": open_cases,
+            "high_priority_cases": high_priority,
+            "possible_outbreaks": outbreaks_possible,
+            "confirmed_outbreaks": outbreaks_confirmed,
+            "todays_field_visits": fv_today,
+        }
+    except Exception as exc:
+        logger.warning("get_dashboard_stats encountered an error (%s). Returning default counters.", exc)
+        return default_stats

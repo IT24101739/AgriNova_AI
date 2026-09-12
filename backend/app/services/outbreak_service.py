@@ -109,108 +109,120 @@ async def check_nearby_outbreak(
 
 def detect_outbreak_candidates() -> list[dict[str, Any]]:
     """Scans recent reports and creates CANDIDATE outbreak rows where clusters exist."""
-    db = get_supabase()
-    cutoff = (datetime.utcnow() - timedelta(days=OUTBREAK_WINDOW_DAYS)).isoformat()
+    try:
+        db = get_supabase()
+        cutoff = (datetime.utcnow() - timedelta(days=OUTBREAK_WINDOW_DAYS)).isoformat()
 
-    reports_raw = (
-        db.table("reports")
-        .select("id, disease, crop, confidence, severity, created_at, farms(latitude, longitude, district)")
-        .gte("created_at", cutoff)
-        .not_.is_("disease", "null")
-        .execute()
-        .data
-    )
-
-    groups: dict[str, list[dict]] = {}
-    for r in (reports_raw or []):
-        farm = r.get("farms") or {}
-        lat = farm.get("latitude")
-        lon = farm.get("longitude")
-        if lat is None or lon is None:
-            continue
-        key = f"{r['disease']}|{r['crop']}"
-        groups.setdefault(key, []).append({**r, "_lat": float(lat), "_lon": float(lon)})
-
-    new_candidates = []
-    for key, group in groups.items():
-        if len(group) < OUTBREAK_MIN_REPORTS:
-            continue
-
-        cluster_center_lat = sum(r["_lat"] for r in group) / len(group)
-        cluster_center_lon = sum(r["_lon"] for r in group) / len(group)
-        close_pairs = 0
-        for i in range(len(group)):
-            for j in range(i + 1, len(group)):
-                d = _haversine_km(
-                    group[i]["_lat"], group[i]["_lon"],
-                    group[j]["_lat"], group[j]["_lon"],
-                )
-                if d <= OUTBREAK_RADIUS_KM:
-                    close_pairs += 1
-                    if close_pairs >= 2:
-                        break
-            if close_pairs >= 2:
-                break
-
-        if close_pairs < 2:
-            continue
-
-        disease, crop = key.split("|", 1)
-
-        existing = (
-            db.table("outbreaks")
-            .select("id, status")
-            .eq("disease", disease)
-            .eq("crop", crop)
-            .in_("status", ["CANDIDATE", "CONFIRMED"])
+        reports_raw = (
+            db.table("reports")
+            .select("id, disease, crop, confidence, severity, created_at, farms(latitude, longitude, district)")
+            .gte("created_at", cutoff)
+            .not_.is_("disease", "null")
             .execute()
             .data
         )
-        if existing:
-            continue
 
-        avg_confidence = sum(r.get("confidence") or 0 for r in group) / len(group)
-        payload = {
-            "id": str(uuid.uuid4()),
-            "disease": disease,
-            "crop": crop,
-            "latitude": cluster_center_lat,
-            "longitude": cluster_center_lon,
-            "radius_km": OUTBREAK_RADIUS_KM,
-            "status": "CANDIDATE",
-            "report_count": len(group),
-            "avg_confidence": round(avg_confidence, 3),
-            "created_at": datetime.utcnow().isoformat(),
-        }
-        result = db.table("outbreaks").insert(payload).execute()
-        new_candidates.append(result.data[0])
-        logger.info("New outbreak candidate: %s %s (%d reports)", disease, crop, len(group))
+        groups: dict[str, list[dict]] = {}
+        for r in (reports_raw or []):
+            farm = r.get("farms") or {}
+            lat = farm.get("latitude")
+            lon = farm.get("longitude")
+            if lat is None or lon is None:
+                continue
+            key = f"{r['disease']}|{r['crop']}"
+            groups.setdefault(key, []).append({**r, "_lat": float(lat), "_lon": float(lon)})
 
-    return new_candidates
+        new_candidates = []
+        for key, group in groups.items():
+            if len(group) < OUTBREAK_MIN_REPORTS:
+                continue
+
+            cluster_center_lat = sum(r["_lat"] for r in group) / len(group)
+            cluster_center_lon = sum(r["_lon"] for r in group) / len(group)
+            close_pairs = 0
+            for i in range(len(group)):
+                for j in range(i + 1, len(group)):
+                    d = _haversine_km(
+                        group[i]["_lat"], group[i]["_lon"],
+                        group[j]["_lat"], group[j]["_lon"],
+                    )
+                    if d <= OUTBREAK_RADIUS_KM:
+                        close_pairs += 1
+                        if close_pairs >= 2:
+                            break
+                if close_pairs >= 2:
+                    break
+
+            if close_pairs < 2:
+                continue
+
+            disease, crop = key.split("|", 1)
+
+            existing = (
+                db.table("outbreaks")
+                .select("id, status")
+                .eq("disease", disease)
+                .eq("crop", crop)
+                .in_("status", ["CANDIDATE", "CONFIRMED"])
+                .execute()
+                .data
+            )
+            if existing:
+                continue
+
+            avg_confidence = sum(r.get("confidence") or 0 for r in group) / len(group)
+            payload = {
+                "id": str(uuid.uuid4()),
+                "disease": disease,
+                "crop": crop,
+                "latitude": cluster_center_lat,
+                "longitude": cluster_center_lon,
+                "radius_km": OUTBREAK_RADIUS_KM,
+                "status": "CANDIDATE",
+                "report_count": len(group),
+                "avg_confidence": round(avg_confidence, 3),
+                "created_at": datetime.utcnow().isoformat(),
+            }
+            result = db.table("outbreaks").insert(payload).execute()
+            new_candidates.append(result.data[0])
+            logger.info("New outbreak candidate: %s %s (%d reports)", disease, crop, len(group))
+
+        return new_candidates
+    except Exception as exc:
+        logger.warning("detect_outbreak_candidates failed (%s). Returning empty list.", exc)
+        return []
 
 
 def get_outbreak_candidates() -> list[dict[str, Any]]:
-    db = get_supabase()
-    return (
-        db.table("outbreaks")
-        .select("*")
-        .in_("status", ["CANDIDATE"])
-        .order("created_at", desc=True)
-        .execute()
-        .data
-    )
+    try:
+        db = get_supabase()
+        res = (
+            db.table("outbreaks")
+            .select("*")
+            .in_("status", ["CANDIDATE"])
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return res.data or []
+    except Exception as exc:
+        logger.warning("get_outbreak_candidates query failed (%s). Returning empty list.", exc)
+        return []
 
 
 def get_confirmed_outbreaks() -> list[dict[str, Any]]:
-    db = get_supabase()
-    return (
-        db.table("outbreaks")
-        .select("*")
-        .eq("status", "CONFIRMED")
-        .order("confirmed_at", desc=True)
-        .execute()
-        .data
-    )
+    try:
+        db = get_supabase()
+        res = (
+            db.table("outbreaks")
+            .select("*")
+            .eq("status", "CONFIRMED")
+            .order("confirmed_at", desc=True)
+            .execute()
+        )
+        return res.data or []
+    except Exception as exc:
+        logger.warning("get_confirmed_outbreaks query failed (%s). Returning empty list.", exc)
+        return []
 
 
 def confirm_outbreak(
@@ -287,22 +299,69 @@ def get_map_reports(
     status: Optional[str] = None,
 ) -> list[dict[str, Any]]:
     """Geo-tagged reports for the regional map."""
-    db = get_supabase()
-    q = (
-        db.table("reports")
-        .select(
-            "id, crop, disease, confidence, severity, spread_risk, status, created_at, "
-            "farms(latitude, longitude, district)"
+    try:
+        db = get_supabase()
+        q = (
+            db.table("reports")
+            .select(
+                "id, crop, disease, confidence, severity, spread_risk, status, created_at, "
+                "farms(latitude, longitude, district)"
+            )
+            .not_.is_("farms.latitude", "null")
         )
-        .not_.is_("farms.latitude", "null")
-    )
-    if crop:
-        q = q.eq("crop", crop)
-    if disease:
-        q = q.eq("disease", disease)
-    if severity:
-        q = q.eq("severity", severity)
-    if status:
-        q = q.eq("status", status)
+        if crop:
+            q = q.eq("crop", crop)
+        if disease:
+            q = q.eq("disease", disease)
+        if severity:
+            q = q.eq("severity", severity)
+        if status:
+            q = q.eq("status", status)
 
-    return q.execute().data
+        res = q.execute()
+        if res.data:
+            return res.data
+    except Exception as exc:
+        logger.warning("Supabase map_reports query failed (%s). Falling back to local ORM.", exc)
+
+    # Fallback to local ORM
+    from app.models.database import SessionLocal
+    from app.models.report_model import Report
+    session = SessionLocal()
+    try:
+        q = session.query(Report)
+        if crop:
+            q = q.filter(Report.crop == crop)
+        if disease:
+            q = q.filter(Report.disease == disease)
+        if severity:
+            q = q.filter(Report.severity == severity)
+        if status:
+            q = q.filter(Report.status == status)
+
+        results = []
+        for r in q.order_by(Report.created_at.desc()).limit(100).all():
+            farm_info = {}
+            if r.farm:
+                farm_info = {
+                    "latitude": r.farm.latitude,
+                    "longitude": r.farm.longitude,
+                    "district": r.farm.district,
+                }
+            results.append({
+                "id": str(r.id),
+                "crop": r.crop,
+                "disease": r.disease,
+                "confidence": r.confidence,
+                "severity": r.severity,
+                "spread_risk": r.spread_risk,
+                "status": r.status,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "farms": farm_info,
+            })
+        return results
+    except Exception as exc:
+        logger.error("ORM map_reports query failed: %s", exc)
+        return []
+    finally:
+        session.close()
