@@ -35,7 +35,8 @@ def upload_image(file_bytes: bytes, original_filename: str) -> str:
     storage_path = f"reports/{uuid.uuid4()}{ext}"
 
     try:
-        client = create_client(settings.supabase_url, settings.supabase_key)
+        key = settings.supabase_service_key or settings.supabase_key
+        client = create_client(settings.supabase_url, key)
         bucket = client.storage.from_(settings.storage_bucket)
 
         # Upload file
