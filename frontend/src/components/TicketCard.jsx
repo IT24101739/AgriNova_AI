@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PriorityBadge from './PriorityBadge';
-import { Clock, ChevronRight, MapPin, Loader2 } from 'lucide-react';
-import { API_BASE } from '../config/api';
+import { Clock, ChevronRight, MapPin } from 'lucide-react';
 
 const STATUS_COLORS = {
-  OPEN: 'text-slate-400',
-  ASSIGNED: 'text-blue-400',
-  FIELD_VISIT_REQUIRED: 'text-amber-400',
-  UNDER_REVIEW: 'text-violet-400',
-  LAB_REVIEW: 'text-pink-400',
-  CONFIRMED: 'text-green-400',
-  RESOLVED: 'text-slate-500',
+  OPEN:                 'bg-slate-700/50 text-slate-300 border-slate-600/40',
+  ASSIGNED:             'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  FIELD_VISIT_REQUIRED: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+  UNDER_REVIEW:         'bg-violet-500/20 text-violet-300 border-violet-500/30',
+  LAB_REVIEW:           'bg-pink-500/20 text-pink-300 border-pink-500/30',
+  CONFIRMED:            'bg-green-500/20 text-green-300 border-green-500/30',
+  RESOLVED:             'bg-slate-600/30 text-slate-400 border-slate-600/40',
 };
 
 function formatDate(iso) {
@@ -21,29 +20,10 @@ function formatDate(iso) {
   });
 }
 
-export default function TicketCard({ ticket, onDeleted, onStatusUpdated }) {
+export default function TicketCard({ ticket }) {
   const navigate = useNavigate();
   const report = ticket.reports || {};
   const farm = report.farms || {};
-  const [updating, setUpdating] = useState(false);
-
-  const handleStatusChange = async (e, newStatus) => {
-    e.stopPropagation();
-    setUpdating(true);
-    try {
-      await fetch(`${API_BASE}/api/officer/tickets/${ticket.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      onStatusUpdated?.(ticket.id, newStatus);
-    } catch (err) {
-      console.error('Update status error:', err);
-      alert('Failed to update ticket status');
-    } finally {
-      setUpdating(false);
-    }
-  };
 
   return (
     <div
@@ -55,28 +35,11 @@ export default function TicketCard({ ticket, onDeleted, onStatusUpdated }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {/* Header */}
-          <div className="flex items-center gap-2 mb-2 flex-wrap" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <PriorityBadge priority={ticket.priority} />
-            {updating ? (
-              <span className="flex items-center gap-1 text-[11px] text-emerald-400">
-                <Loader2 className="w-3 h-3 animate-spin" /> Updating...
-              </span>
-            ) : (
-              <select
-                value={ticket.status || 'OPEN'}
-                onChange={(e) => handleStatusChange(e, e.target.value)}
-                className="text-[11px] font-semibold py-0.5 px-2 rounded-lg border border-white/10 bg-[#07160d] text-slate-200 hover:border-emerald-500/50 cursor-pointer outline-none transition-colors"
-                title="Change ticket status"
-              >
-                <option value="OPEN" className="bg-[#07160d] text-slate-300">OPEN</option>
-                <option value="ASSIGNED" className="bg-[#07160d] text-blue-300">ASSIGNED</option>
-                <option value="FIELD_VISIT_REQUIRED" className="bg-[#07160d] text-amber-300">FIELD VISIT REQUIRED</option>
-                <option value="UNDER_REVIEW" className="bg-[#07160d] text-violet-300">UNDER REVIEW</option>
-                <option value="LAB_REVIEW" className="bg-[#07160d] text-pink-300">LAB REVIEW</option>
-                <option value="CONFIRMED" className="bg-[#07160d] text-green-300">CONFIRMED</option>
-                <option value="RESOLVED" className="bg-[#07160d] text-slate-400">RESOLVED</option>
-              </select>
-            )}
+            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${STATUS_COLORS[ticket.status] || STATUS_COLORS.OPEN}`}>
+              {(ticket.status || 'OPEN').replace(/_/g, ' ')}
+            </span>
           </div>
 
           {/* Disease */}

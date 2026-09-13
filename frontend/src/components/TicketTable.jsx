@@ -5,20 +5,19 @@ import { ArrowUpDown, ChevronRight } from 'lucide-react';
 import { API_BASE } from '../config/api';
 
 const STATUS_PILL = {
-  OPEN:                 'bg-slate-700/60 text-slate-300',
-  ASSIGNED:             'bg-blue-500/20 text-blue-300',
-  FIELD_VISIT_REQUIRED: 'bg-amber-500/20 text-amber-300',
-  UNDER_REVIEW:         'bg-violet-500/20 text-violet-300',
-  LAB_REVIEW:           'bg-pink-500/20 text-pink-300',
-  CONFIRMED:            'bg-green-500/20 text-green-300',
-  RESOLVED:             'bg-slate-600/40 text-slate-400',
+  OPEN:                 'bg-slate-700/50 text-slate-300 border-slate-600/40',
+  ASSIGNED:             'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  FIELD_VISIT_REQUIRED: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+  UNDER_REVIEW:         'bg-violet-500/20 text-violet-300 border-violet-500/30',
+  LAB_REVIEW:           'bg-pink-500/20 text-pink-300 border-pink-500/30',
+  CONFIRMED:            'bg-green-500/20 text-green-300 border-green-500/30',
+  RESOLVED:             'bg-slate-600/30 text-slate-400 border-slate-600/40',
 };
 
 export default function TicketTable({ tickets = [], loading, onDeleted, onStatusUpdated }) {
   const navigate = useNavigate();
   const [sortKey, setSortKey] = useState('created_at');
   const [sortAsc, setSortAsc] = useState(false);
-  const [updatingId, setUpdatingId] = useState(null);
 
   const sorted = [...tickets].sort((a, b) => {
     const va = sortKey === 'confidence'
@@ -33,24 +32,6 @@ export default function TicketTable({ tickets = [], loading, onDeleted, onStatus
   const toggleSort = (key) => {
     if (sortKey === key) setSortAsc(a => !a);
     else { setSortKey(key); setSortAsc(false); }
-  };
-
-  const handleStatusChange = async (e, ticketId, newStatus) => {
-    e.stopPropagation();
-    setUpdatingId(ticketId);
-    try {
-      await fetch(`${API_BASE}/api/officer/tickets/${ticketId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      onStatusUpdated?.(ticketId, newStatus);
-    } catch (err) {
-      console.error('Update status error:', err);
-      alert('Failed to update ticket status');
-    } finally {
-      setUpdatingId(null);
-    }
   };
 
   const Th = ({ col, label }) => (
@@ -118,30 +99,10 @@ export default function TicketTable({ tickets = [], loading, onDeleted, onStatus
                 <td>
                   <span className="text-xs text-slate-300">{ticket.reason?.replace(/_/g, ' ')}</span>
                 </td>
-                <td onClick={e => e.stopPropagation()}>
-                  <div className="relative inline-flex items-center">
-                    {updatingId === ticket.id ? (
-                      <span className="flex items-center gap-1.5 px-2 py-1 text-xs text-emerald-400 bg-emerald-950/60 rounded-lg">
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        Saving...
-                      </span>
-                    ) : (
-                      <select
-                        value={ticket.status || 'OPEN'}
-                        onChange={(e) => handleStatusChange(e, ticket.id, e.target.value)}
-                        className={`text-[11px] font-semibold py-1 px-2 rounded-lg border border-white/10 outline-none cursor-pointer transition-colors bg-[#07160d] hover:border-emerald-500/50 ${statusCls}`}
-                        title="Click to update status"
-                      >
-                        <option value="OPEN" className="bg-[#07160d] text-slate-300">OPEN</option>
-                        <option value="ASSIGNED" className="bg-[#07160d] text-blue-300">ASSIGNED</option>
-                        <option value="FIELD_VISIT_REQUIRED" className="bg-[#07160d] text-amber-300">FIELD VISIT REQUIRED</option>
-                        <option value="UNDER_REVIEW" className="bg-[#07160d] text-violet-300">UNDER REVIEW</option>
-                        <option value="LAB_REVIEW" className="bg-[#07160d] text-pink-300">LAB REVIEW</option>
-                        <option value="CONFIRMED" className="bg-[#07160d] text-green-300">CONFIRMED</option>
-                        <option value="RESOLVED" className="bg-[#07160d] text-slate-400">RESOLVED</option>
-                      </select>
-                    )}
-                  </div>
+                <td>
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusCls}`}>
+                    {(ticket.status || 'OPEN').replace(/_/g, ' ')}
+                  </span>
                 </td>
                 <td>
                   <span className={`font-mono text-sm font-semibold ${
